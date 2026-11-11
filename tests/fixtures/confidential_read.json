@@ -1,0 +1,5 @@
+{
+    "agent_id": "research_agent",
+    "action": "read_document",
+    "resource": "confidential_notes.txt"
+}

