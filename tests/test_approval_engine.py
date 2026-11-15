@@ -148,3 +148,59 @@ def test_missing_reviewer_configuration_fails_closed(
         )
         if decision not in ("APPROVE", "REJECT"):
             raise ValueError("Decision must be APPROVE or REJECT")
+
+
+def test_expired_pending_approval_cannot_be_approved(
+    isolated_db,
+    monkeypatch,
+):
+    approval = approval_engine.create_approval(make_request())
+
+    monkeypatch.setattr(
+        ApprovalRequest,
+        "is_expired",
+        property(lambda self: True),
+    )
+
+    result = approval_engine.review_approval(
+        approval.approval_id,
+        "APPROVE",
+        "demo_reviewer",
+        "test-secret-token",
+    )
+
+    assert result is False
+    assert approval_store.get_approval(
+        approval.approval_id
+    ).status == ApprovalStatus.EXPIRED
+
+
+def test_expired_approved_approval_cannot_be_consumed(
+    isolated_db,
+    monkeypatch,
+):
+    request = make_request()
+    approval = approval_engine.create_approval(request)
+
+    approval_engine.review_approval(
+        approval.approval_id,
+        "APPROVE",
+        "demo_reviewer",
+        "test-secret-token",
+    )
+
+    monkeypatch.setattr(
+        ApprovalRequest,
+        "is_expired",
+        property(lambda self: True),
+    )
+
+    result = approval_engine.consume_approval(
+        approval.approval_id,
+        request,
+    )
+
+    assert result is False
+    assert approval_store.get_approval(
+        approval.approval_id
+    ).status == ApprovalStatus.EXPIRED

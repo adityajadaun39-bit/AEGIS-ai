@@ -16,7 +16,10 @@ AGENT_REGISTRY = {
             "read_document",
             "search_documents",
         }),
-        allowed_resources=frozenset({"public_report.pdf"}),
+        allowed_resources=frozenset({
+    "public_report.pdf",
+    "trusted_research_report.pdf",
+}),
     ),
     "supervised_research_agent": AgentPermissions(
         allowed_actions=frozenset({"send_email"}),

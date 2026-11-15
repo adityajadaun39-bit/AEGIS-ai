@@ -3,11 +3,8 @@
 
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterator
-
-from contextlib import contextmanager
 from typing import Iterator
 
 from backend.schemas.approval import ApprovalRequest, ApprovalStatus
@@ -15,30 +12,22 @@ from backend.schemas.approval import ApprovalRequest, ApprovalStatus
 
 DB_PATH = Path(__file__).resolve().parents[2] / "data" / "aegis.db"
 
+
 @contextmanager
 def _get_connection() -> Iterator[sqlite3.Connection]:
+    """Provide a transaction-managed SQLite connection."""
+
     connection = sqlite3.connect(DB_PATH)
     connection.row_factory = sqlite3.Row
-    try:
-        with connection:
-            yield connection
-    finally:
-        connection.close()
-
-@contextmanager
-def _get_connection() -> Iterator[sqlite3.Connection]:
-    """Provide a transaction-managed SQLite connection that always closes."""
-
-    connection = sqlite3.connect(DB_PATH)
 
     try:
         with connection:
             yield connection
     finally:
         connection.close()
-
 
 def initialize_approval_db() -> None:
+
     """Create the approval table if it does not exist."""
 
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -58,6 +47,7 @@ def initialize_approval_db() -> None:
             )
             """
         )
+
 
 
 def create_approval(request: ApprovalRequest) -> bool:
@@ -128,6 +118,62 @@ def get_approval(approval_id: str) -> ApprovalRequest | None:
         created_at=datetime.fromisoformat(row["created_at"]),
         expires_at=datetime.fromisoformat(row["expires_at"]),
     )
+
+def list_approvals(
+    status: ApprovalStatus | None = None,
+) -> list[ApprovalRequest]:
+    initialize_approval_db()
+    now = datetime.now(timezone.utc).isoformat()
+
+    with _get_connection() as connection:
+        connection.execute(
+            """
+            UPDATE approval_requests
+            SET status = ?
+            WHERE status = ?
+            AND expires_at <= ?
+            """,
+            (
+                ApprovalStatus.EXPIRED.value,
+                ApprovalStatus.PENDING.value,
+                now,
+            ),
+        )
+    """List approval requests, optionally filtered by status."""
+
+    initialize_approval_db()
+
+    with _get_connection() as connection:
+        if status is None:
+            rows = connection.execute(
+                """
+                SELECT * FROM approval_requests
+                ORDER BY created_at DESC
+                """
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT * FROM approval_requests
+                WHERE status = ?
+                ORDER BY created_at DESC
+                """,
+                (status.value,),
+            ).fetchall()
+
+    return [
+        ApprovalRequest(
+            approval_id=row["approval_id"],
+            agent_id=row["agent_id"],
+            action=row["action"],
+            resource=row["resource"],
+            payload_hash=row["payload_hash"],
+            status=row["status"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            expires_at=datetime.fromisoformat(row["expires_at"]),
+        )
+        for row in rows
+    ]
 
 
 def update_approval_status(

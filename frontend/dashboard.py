@@ -53,9 +53,27 @@ def api_get(path: str, params: dict | None = None):
     except httpx.HTTPError as exc:
         return None, str(exc)
 
+def api_post(path: str, payload: dict, token: str):
+    """Submit an authenticated approval decision."""
+
+    try:
+        response = httpx.post(
+            f"{api_url}{path}",
+            json=payload,
+            headers={
+                "X-AEGIS-Approver-Token": token,
+            },
+            timeout=5.0,
+        )
+        response.raise_for_status()
+        return response.json(), None
+    except httpx.HTTPError as exc:
+        return None, str(exc)
+
 
 health, health_error = api_get("/health")
 audit_data, audit_error = api_get("/audit", {"limit": 500})
+
 
 if health_error:
     st.error(f"Backend connection failed: {health_error}")
@@ -89,6 +107,160 @@ col4.metric("Pending Approval", pending)
 col5.metric("Errors", errors)
 
 st.divider()
+
+# Approval Management Console
+st.subheader("Approval Management Console")
+st.caption("Review, authorize, and inspect AI agent approval requests.")
+
+reviewer_id = st.text_input(
+    "Reviewer ID",
+    placeholder="Enter reviewer identity",
+    key="reviewer_id",
+)
+
+reviewer_token = st.text_input(
+    "Reviewer Authentication Token",
+    type="password",
+    placeholder="Enter your reviewer secret",
+    key="reviewer_token",
+)
+
+approval_statuses = ["PENDING", "APPROVED", "REJECTED", "EXPIRED"]
+
+selected_status = st.selectbox(
+    "Filter approval requests",
+    ["ALL"] + approval_statuses,
+    index=1,
+    key="approval_status_filter",
+)
+
+# Fetch approval requests according to the selected status.
+if selected_status == "ALL":
+    all_approvals = []
+    approval_errors = []
+
+    for status in approval_statuses:
+        data, error = api_get("/approvals", {"status": status})
+
+        if error:
+            approval_errors.append(f"{status}: {error}")
+        elif data is not None:
+            all_approvals.extend(data.get("approvals", []))
+
+    approval_data = {"approvals": all_approvals}
+    approval_error = "; ".join(approval_errors) if approval_errors else None
+
+else:
+    approval_data, approval_error = api_get(
+        "/approvals",
+        {"status": selected_status},
+    )
+
+if approval_error:
+    st.error(f"Could not retrieve approvals: {approval_error}")
+
+elif approval_data is not None:
+    approvals = approval_data.get("approvals", [])
+
+    approvals.sort(
+        key=lambda item: item.get("created_at", ""),
+        reverse=True,
+    )
+
+    pending_count = sum(
+        item.get("status") == "PENDING" and not item.get("is_expired")
+        for item in approvals
+    )
+
+    approved_count = sum(
+        item.get("status") == "APPROVED" for item in approvals
+    )
+
+    rejected_count = sum(
+        item.get("status") == "REJECTED" for item in approvals
+    )
+
+    expired_count = sum(
+        item.get("status") == "EXPIRED" for item in approvals
+    )
+
+    metric1, metric2, metric3, metric4 = st.columns(4)
+    metric1.metric("Pending", pending_count)
+    metric2.metric("Approved", approved_count)
+    metric3.metric("Rejected", rejected_count)
+    metric4.metric("Expired", expired_count)
+
+    st.caption(f"Showing {len(approvals)} request(s).")
+
+    if not approvals:
+        st.info("No approval requests found for this filter.")
+
+    for item in approvals:
+        status = item.get("status", "UNKNOWN")
+
+        with st.container(border=True):
+            st.markdown(
+                f"**Agent:** `{item['agent_id']}`"
+            )
+
+            st.write(f"**Approval ID:** `{item['approval_id']}`")
+            st.write(f"**Action:** `{item['action']}`")
+            st.write(f"**Resource:** `{item['resource']}`")
+            st.write(f"**Status:** `{status}`")
+            st.write(f"**Created:** {item['created_at']}")
+            st.write(f"**Expires:** {item['expires_at']}")
+
+            if status != "PENDING":
+                continue
+
+            if item.get("is_expired"):
+                st.warning("This request has expired.")
+                continue
+
+            approve_col, reject_col = st.columns(2)
+
+            if approve_col.button(
+                "Approve",
+                key=f"approve_{item['approval_id']}",
+                use_container_width=True,
+                disabled=not reviewer_id.strip() or not reviewer_token,
+            ):
+                result, error = api_post(
+                    f"/approvals/{item['approval_id']}/review",
+                    {
+                        "decision": "APPROVE",
+                        "reviewer_id": reviewer_id.strip(),
+                    },
+                    reviewer_token,
+                )
+
+                if error:
+                    st.error(f"Approval failed: {error}")
+                else:
+                    st.success("Approval recorded successfully.")
+                    st.rerun()
+
+            if reject_col.button(
+                "Reject",
+                key=f"reject_{item['approval_id']}",
+                use_container_width=True,
+                disabled=not reviewer_id.strip() or not reviewer_token,
+            ):
+                result, error = api_post(
+                    f"/approvals/{item['approval_id']}/review",
+                    {
+                        "decision": "REJECT",
+                        "reviewer_id": reviewer_id.strip(),
+                    },
+                    reviewer_token,
+                )
+
+                if error:
+                    st.error(f"Rejection failed: {error}")
+                else:
+                    st.success("Request rejected successfully.")
+                    st.rerun()
+
 
 # Overview charts
 left, right = st.columns(2)

@@ -6,8 +6,9 @@ def test_registered_read_tool_executes():
     broker = ToolBroker()
 
     result = broker.execute(
-        "read_document",
-        "public_report.pdf",
+    "read_document",
+    "public_report.pdf",
+    allowed_resources=frozenset({"public_report.pdf"}),
     )
 
     assert result["success"] is True

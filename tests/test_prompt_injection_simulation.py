@@ -118,3 +118,28 @@ def test_prompt_injection_blocked_even_after_human_approval(
 
     stored_approval = get_approval(approval.approval_id)
     assert stored_approval.status == ApprovalStatus.APPROVED
+
+
+    # 7. Verify both events belong to the same attack.
+    from backend.security.audit import get_attack_trace
+
+    document_attack_id = read_result["gateway_result"]["attack_id"]
+    email_attack_id = attack_result["attack_id"]
+
+    assert document_attack_id is not None
+    assert email_attack_id == document_attack_id
+
+    correlated_events = get_attack_trace(document_attack_id)
+
+    assert any(
+        event["action"] == "read_document"
+        and event["decision"] == "ALLOW"
+        for event in correlated_events
+    )
+
+    assert any(
+        event["action"] == "send_email"
+        and event["decision"] == "DENY"
+        and event["tool_invoked"] is False
+        for event in correlated_events
+    )

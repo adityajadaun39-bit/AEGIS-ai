@@ -26,3 +26,9 @@ allow if {
     is_string(input.content)
     input.content != ""
 }
+# Permit the explicitly registered trusted test document.
+allow if {
+    input.agent_id == "research_agent"
+    input.action == "read_document"
+    input.resource == "trusted_research_report.pdf"
+}

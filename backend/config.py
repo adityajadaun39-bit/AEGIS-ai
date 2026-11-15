@@ -1,4 +1,10 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(
+    dotenv_path=Path(__file__).resolve().parents[1] / ".env"
+)
 
 APP_NAME = os.getenv("AEGIS_APP_NAME", "AEGIS")
 APP_VERSION = os.getenv("AEGIS_APP_VERSION", "0.1.0")

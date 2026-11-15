@@ -1,27 +1,88 @@
-
+import hmac
+import os
 from typing import Literal
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from backend import config
+from backend.schemas.actions import ActionRequest
 from backend.security.audit import (
     get_audit_logs,
     get_audit_trace,
     get_attack_trace,
 )
-from backend import config
-from backend.schemas.actions import ActionRequest
 from backend.security.authorization import authorize_action
-from backend.security.policy_engine import evaluate_policy
+from backend.security.policy_engine import (
+    evaluate_policy,
+    evaluate_information_flow,
+)
+from backend.security.provenance_context import resolve_context_details
 from backend.security.approval_engine import (
     create_approval,
     review_approval,
 )
 from backend.security.gateway import execute_action
 
+from backend.schemas.approval import ApprovalStatus
+from backend.security import approval_store
+from backend.security.agent_auth import authenticate_agent
+
 
 app = FastAPI(title=config.APP_NAME, version=config.APP_VERSION)
+
+
+def _token_matches(supplied: str | None, env_name: str) -> bool:
+    expected = os.getenv(env_name)
+
+    return bool(
+        supplied
+        and expected
+        and hmac.compare_digest(supplied, expected)
+    )
+
+
+def require_admin(admin_token: str | None) -> None:
+    if not _token_matches(admin_token, "AEGIS_ADMIN_TOKEN"):
+        raise HTTPException(
+            status_code=403,
+            detail="Administrator authentication required",
+        )
+
+
+def require_reviewer_or_admin(
+    reviewer_token: str | None,
+    admin_token: str | None,
+) -> None:
+    if not (
+        _token_matches(reviewer_token, "AEGIS_APPROVER_TOKEN")
+        or _token_matches(admin_token, "AEGIS_ADMIN_TOKEN")
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Reviewer or administrator authentication required",
+        )
+
+
+def require_agent_identity(
+    request: ActionRequest,
+    token: str | None,
+) -> None:
+    """Authenticate the API caller and prevent agent impersonation."""
+
+    authenticated_agent = authenticate_agent(token)
+
+    if authenticated_agent is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid or unconfigured agent credentials",
+        )
+
+    if authenticated_agent != request.agent_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Authenticated agent does not match request agent_id",
+        )
 
 
 class ApprovalReviewBody(BaseModel):
@@ -44,9 +105,51 @@ def read_root() -> dict[str, str]:
 def health() -> dict[str, str]:
     return {"status": "healthy"}
 
+@app.get("/approvals")
+def list_human_approvals(
+    status: ApprovalStatus = Query(
+        default=ApprovalStatus.PENDING
+    ),
+    reviewer_token: str | None = Header(
+        default=None,
+        alias="X-AEGIS-Approver-Token",
+    ),
+    admin_token: str | None = Header(
+        default=None,
+        alias="X-AEGIS-Admin-Token",
+    ),
+):
+    require_reviewer_or_admin(reviewer_token, admin_token)
+
+    approvals = approval_store.list_approvals(status)
+
+    return {
+        "count": len(approvals),
+        "approvals": [
+            {
+                "approval_id": item.approval_id,
+                "agent_id": item.agent_id,
+                "action": item.action,
+                "resource": item.resource,
+                "status": item.status.value,
+                "created_at": item.created_at.isoformat(),
+                "expires_at": item.expires_at.isoformat(),
+                "is_expired": item.is_expired,
+            }
+            for item in approvals
+        ],
+    }
 
 @app.post("/approvals")
-def request_human_approval(request: ActionRequest):
+def request_human_approval(
+    request: ActionRequest,
+    agent_token: str | None = Header(
+        default=None,
+        alias="X-AEGIS-Agent-Token",
+    ),
+):
+    require_agent_identity(request, agent_token)
+
     if request.action != "send_email":
         raise HTTPException(
             status_code=400,
@@ -67,6 +170,24 @@ def request_human_approval(request: ActionRequest):
     if not allowed:
         raise HTTPException(status_code=403, detail=reason)
 
+    context = resolve_context_details(
+        request.provenance_context_id
+    )
+
+    if context is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Verified provenance context required",
+        )
+
+    allowed, reason = evaluate_information_flow(
+        request,
+        context["records"],
+    )
+
+    if not allowed:
+        raise HTTPException(status_code=403, detail=reason)
+
     try:
         approval = create_approval(request)
     except (ValueError, RuntimeError):
@@ -76,7 +197,6 @@ def request_human_approval(request: ActionRequest):
         )
 
     return approval.model_dump(mode="json")
-
 
 @app.post("/approvals/{approval_id}/review")
 def review_human_approval(
@@ -114,9 +234,14 @@ def review_human_approval(
 def submit_action(
     request: ActionRequest,
     approval_id: str | None = None,
+    agent_token: str | None = Header(
+        default=None,
+        alias="X-AEGIS-Agent-Token",
+    ),
 ):
-    return execute_action(request, approval_id=approval_id)
+    require_agent_identity(request, agent_token)
 
+    return execute_action(request, approval_id=approval_id)
 
 
 @app.get("/audit")
@@ -125,8 +250,12 @@ def read_audit_logs(
     decision: str | None = None,
     agent_id: str | None = None,
     attack_id: str | None = None,
+    admin_token: str | None = Header(
+        default=None,
+        alias="X-AEGIS-Admin-Token",
+    ),
 ):
-    """Retrieve recent security audit events."""
+    require_admin(admin_token)
 
     return {
         "events": get_audit_logs(
@@ -137,10 +266,15 @@ def read_audit_logs(
         )
     }
 
-
 @app.get("/audit/traces/{trace_id}")
-def read_audit_trace(trace_id: str):
-    """Retrieve events belonging to one execution trace."""
+def read_audit_trace(
+    trace_id: str,
+    admin_token: str | None = Header(
+        default=None,
+        alias="X-AEGIS-Admin-Token",
+    ),
+):
+    require_admin(admin_token)
 
     events = get_audit_trace(trace_id)
 
@@ -156,10 +290,15 @@ def read_audit_trace(trace_id: str):
         "events": events,
     }
 
-
 @app.get("/audit/attacks/{attack_id}")
-def read_attack_trace(attack_id: str):
-    """Retrieve all correlated events belonging to one attack."""
+def read_attack_trace(
+    attack_id: str,
+    admin_token: str | None = Header(
+        default=None,
+        alias="X-AEGIS-Admin-Token",
+    ),
+):
+    require_admin(admin_token)
 
     events = get_attack_trace(attack_id)
 
@@ -174,34 +313,3 @@ def read_attack_trace(attack_id: str):
         "event_count": len(events),
         "events": events,
     }
-
-
-
-@app.get("/audit/traces/{trace_id}")
-def read_audit_trace(trace_id: str):
-    """Retrieve the chronological events for one execution trace."""
-
-    events = get_audit_trace(trace_id)
-
-    if not events:
-        raise HTTPException(
-            status_code=404,
-            detail="Audit trace not found",
-        )
-
-    return {
-        "trace_id": trace_id,
-        "event_count": len(events),
-        "events": events,
-    }
-
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(
-        "backend.app:app",
-        host=config.HOST,
-        port=config.PORT,
-    )

@@ -40,6 +40,12 @@ class ToolBroker:
             }
 
         if action == "read_document":
+            if resource not in allowed_resources:
+                return {
+                    "success": False,
+                    "error": "Resource not permitted by tool broker",
+                }
+
             return tool(resource)
 
         if action == "search_documents":
