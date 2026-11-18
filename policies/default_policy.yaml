@@ -1,0 +1,23 @@
+version: "1.0"
+policy_name: "aegis_default_access_policy"
+description: "Declarative agent access and information-flow rules for AEGIS"
+
+rules:
+  - agent_id: "research_agent"
+    allowed_actions:
+      - "read_document"
+      - "search_documents"
+    allowed_resources:
+      - "public_report.pdf"
+      - "trusted_research_report.pdf"
+
+  - agent_id: "supervised_research_agent"
+    allowed_actions:
+      - "send_email"
+    allowed_resources:
+      - "email"
+    conditions:
+      require_human_approval: true
+      require_verified_provenance: true
+      disallow_untrusted_source: true
+      disallow_confidential_source: true

@@ -1,0 +1,45 @@
+services:
+  aegis-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aegis-security-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - AEGIS_HOST=0.0.0.0
+      - AEGIS_PORT=8000
+      - AEGIS_ADMIN_TOKEN=aegis-admin-secret-token-demo
+      - AEGIS_APPROVER_TOKEN=aegis-approver-secret-token-demo
+      - AEGIS_AGENT_TOKEN_RESEARCH_AGENT=aegis-research-agent-token
+      - AEGIS_AGENT_TOKEN_SUPERVISED_RESEARCH_AGENT=aegis-supervised-agent-token
+    volumes:
+      - aegis-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  aegis-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aegis-soc-console
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    command: ["streamlit", "run", "frontend/dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    environment:
+      - AEGIS_API_URL=http://aegis-api:8000
+      - AEGIS_ADMIN_TOKEN=aegis-admin-secret-token-demo
+      - AEGIS_APPROVER_TOKEN=aegis-approver-secret-token-demo
+    depends_on:
+      aegis-api:
+        condition: service_healthy
+    volumes:
+      - aegis-data:/app/data
+
+volumes:
+  aegis-data:

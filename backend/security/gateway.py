@@ -20,6 +20,8 @@ from backend.security.provenance_context import (
     resolve_provenance_context,
 )
 from backend.tools.broker import tool_broker
+from backend.security.ml_detector import detect_injection
+from backend.security.dlp_engine import scan_for_secrets
 
 
 def _deny(
@@ -29,6 +31,7 @@ def _deny(
     approval_id: str | None = None,
     tool_invoked: bool = False,
     attack_id: str | None = None,
+    ml_score: float | None = None,
 ) -> dict:
     """Record and return a denied security decision."""
 
@@ -44,13 +47,16 @@ def _deny(
         tool_invoked=tool_invoked,
     )
 
-    return {
+    out = {
         "success": False,
         "decision": "DENY",
         "reason": reason,
         "trace_id": trace_id,
         "attack_id": attack_id,
     }
+    if ml_score is not None:
+        out["ml_score"] = ml_score
+    return out
 
 
 def execute_action(
@@ -62,6 +68,21 @@ def execute_action(
     trace_id = str(uuid.uuid4())
     attack_id = None
     provenance_records = None
+
+    # 0. Scan for prompt injection and sensitive credentials (DLP)
+    ml_result = detect_injection(request.content or request.resource)
+    dlp_result = scan_for_secrets(request.content)
+
+    if request.action == "send_email" and dlp_result["has_sensitive_data"]:
+        finding_types = ", ".join(f["category"] for f in dlp_result["findings"])
+        return _deny(
+            request,
+            f"DLP policy violation: sensitive credentials detected ({finding_types})",
+            trace_id,
+            approval_id,
+            attack_id=attack_id,
+            ml_score=ml_result["score"],
+        )
 
     # 1. Resolve server-controlled provenance for outbound email.
     if request.action == "send_email":
@@ -247,6 +268,9 @@ def execute_action(
         "result": result,
         "trace_id": trace_id,
         "attack_id": attack_id,
+        "ml_score": ml_result["score"],
+        "ml_verdict": ml_result["verdict"],
+        "has_sensitive_data": dlp_result["has_sensitive_data"],
     }
 
     # 8. Register server-verified provenance after document reads.

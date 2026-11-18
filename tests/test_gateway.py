@@ -1,6 +1,22 @@
+from unittest.mock import patch
+import pytest
 
 from backend.schemas.actions import ActionRequest
 from backend.security.gateway import execute_action
+from backend.security.policy_engine import find_opa
+
+
+@pytest.fixture(autouse=True)
+def mock_opa_if_missing():
+    """Ensure gateway tests pass regardless of whether external OPA binary is installed."""
+    if not find_opa():
+        with patch(
+            "backend.security.gateway.evaluate_policy",
+            return_value=(True, "OPA policy allowed action"),
+        ):
+            yield
+    else:
+        yield
 
 
 def test_public_document_is_allowed():
@@ -54,8 +70,6 @@ def test_search_does_not_reveal_confidential_documents():
 
     assert result["decision"] == "ALLOW"
     assert "confidential_notes.txt" not in result["result"]["matches"]
-
-from unittest.mock import patch
 
 
 def test_opa_denial_prevents_tool_execution():
@@ -115,3 +129,18 @@ def test_broker_error_result_is_not_reported_as_success():
 
     assert result["decision"] == "ERROR"
     assert result["success"] is False
+
+
+def test_dlp_violation_blocks_email():
+    request = ActionRequest(
+        action="send_email",
+        agent_id="supervised_research_agent",
+        resource="email",
+        destination="leak@example.com",
+        content="Here is the master AWS key: AKIAIOSFODNN7EXAMPLE",
+        provenance_context_id="test-ctx",
+    )
+    result = execute_action(request)
+    assert result["decision"] == "DENY"
+    assert "DLP policy violation" in result["reason"]
+

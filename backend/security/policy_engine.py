@@ -46,6 +46,34 @@ def evaluate_information_flow(
 
 
 
+def evaluate_in_process_policy(request: ActionRequest) -> tuple[bool, str]:
+    """In-process policy evaluation mirroring agent_access.rego."""
+    if request.agent_id == "research_agent" and request.action == "read_document":
+        if request.resource in {
+            "public_report.pdf",
+            "trusted_research_report.pdf",
+            "evaluation_safe_document.txt",
+        }:
+            return True, "OPA policy allowed action"
+        return False, "OPA policy denied action"
+
+    if request.agent_id == "research_agent" and request.action == "search_documents":
+        if isinstance(request.resource, str) and request.resource.strip():
+            return True, "OPA policy allowed action"
+        return False, "OPA policy denied action"
+
+    if request.agent_id == "supervised_research_agent" and request.action == "send_email":
+        if (
+            request.resource == "email"
+            and request.destination
+            and request.content
+        ):
+            return True, "OPA policy allowed action"
+        return False, "OPA policy denied action"
+
+    return False, "OPA policy denied action"
+
+
 def find_opa() -> str | None:
     """Locate the OPA executable."""
 

@@ -1,8 +1,11 @@
+import asyncio
+import json
 import hmac
 import os
 from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
 from backend import config
@@ -313,3 +316,30 @@ def read_attack_trace(
         "event_count": len(events),
         "events": events,
     }
+
+
+@app.get("/audit/stream")
+async def stream_audit_logs(
+    admin_token: str | None = Header(
+        default=None,
+        alias="X-AEGIS-Admin-Token",
+    ),
+):
+    require_admin(admin_token)
+
+    async def event_generator():
+        last_id = 0
+        for _ in range(30):
+            logs = get_audit_logs(limit=10)
+            if logs:
+                newest = logs[0]
+                if newest["id"] > last_id:
+                    last_id = newest["id"]
+                    payload = json.dumps(newest)
+                    yield f"data: {payload}\n\n"
+            await asyncio.sleep(1)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+    )

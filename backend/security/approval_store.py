@@ -122,6 +122,7 @@ def get_approval(approval_id: str) -> ApprovalRequest | None:
 def list_approvals(
     status: ApprovalStatus | None = None,
 ) -> list[ApprovalRequest]:
+    """List approval requests, optionally filtered by status."""
     initialize_approval_db()
     now = datetime.now(timezone.utc).isoformat()
 
@@ -139,9 +140,6 @@ def list_approvals(
                 now,
             ),
         )
-    """List approval requests, optionally filtered by status."""
-
-    initialize_approval_db()
 
     with _get_connection() as connection:
         if status is None:
