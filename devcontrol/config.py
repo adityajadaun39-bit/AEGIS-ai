@@ -5,7 +5,7 @@ from pathlib import Path
 
 PROJECT_ID = "AEGIS"
 PROJECT_NAME = "AEGIS"
-PROJECT_ROOT = r"C:\Projects\AEGIS"
+PROJECT_ROOT = os.getenv("AEGIS_PROJECT_ROOT", str(Path(__file__).resolve().parents[1]))
 
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 50

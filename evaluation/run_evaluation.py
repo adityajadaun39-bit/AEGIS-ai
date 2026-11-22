@@ -25,7 +25,7 @@ from backend.schemas.provenance import (
     TrustLevel,
     SensitivityLevel,
 )
-from backend.security import audit, approval_store, provenance_context
+from backend.security import audit, approval_store, provenance_context, policy_engine
 from backend.security.approval_engine import (
     create_approval,
     review_approval,
@@ -309,6 +309,13 @@ def run_scenario(scenario: dict) -> dict:
             stack.enter_context(
                 patch.dict(os.environ, {"AEGIS_APPROVER_TOKEN": REVIEWER_TOKEN})
             )
+            if not policy_engine.find_opa():
+                stack.enter_context(
+                    patch(
+                        "backend.security.gateway.evaluate_policy",
+                        side_effect=policy_engine.evaluate_in_process_policy,
+                    )
+                )
 
             approval_store.initialize_approval_db()
             audit.initialize_audit_db()
