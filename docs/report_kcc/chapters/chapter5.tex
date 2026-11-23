@@ -13,7 +13,7 @@ The testing suite was executed across 106 automated tests in 19 modules, achievi
 \midrule
 Core Gateway \& Auth & \texttt{test\_gateway\_routing, test\_agent\_auth} & 14 & 100\% & 0.33 s \\
 ML \& DLP Detectors & \texttt{test\_ml\_detector\_tier1, tier2, dlp} & 24 & 100\% & 0.67 s \\
-IFC \& Theorem 1 & \texttt{test\_ifc\_lattice, theorem\_1\_invariant} & 21 & 100\% & 0.21 s \\
+Causal Lineage \& Invariant & \texttt{test\_ifc\_lattice, test\_provenance\_enforcement} & 21 & 100\% & 0.21 s \\
 Crypto \& WAL Storage & \texttt{test\_crypto\_tokens, approval\_store} & 27 & 100\% & 0.77 s \\
 Scenarios \& Aux & \texttt{test\_scenarios\_e01\_e10, auxiliary} & 20 & 100\% & 0.61 s \\
 \midrule
@@ -36,8 +36,8 @@ Table~\ref{tab:scenarios_results} summarizes the defense evaluation across 10 di
 E01 & Direct Override & Compromised & \textbf{BLOCKED} & Tier-1 Regex & 0.82 ms \\
 E02 & Resume PDF Injection & Exfiltrated & \textbf{BLOCKED} & Tier-2 ONNX & 14.18 ms \\
 E03 & PII SQL Dump & 500 Cards Leaked & \textbf{BLOCKED} & Presidio DLP & 3.12 ms \\
-E04 & Confused Deputy Mail & Email Sent & \textbf{BLOCKED} & Dual-Lattice IFC & 1.24 ms \\
-E05 & Social Eng Approval & Leaked via Human & \textbf{BLOCKED} & Theorem 1 & 0.94 ms \\
+E04 & Confused Deputy Mail & Email Sent & \textbf{BLOCKED} & Causal Lineage Taint & 1.24 ms \\
+E05 & Social Eng Approval & Leaked via Human & \textbf{BLOCKED} & Provenance Dominance & 0.94 ms \\
 E06 & Multi-Lingual Attack & Bypassed & \textbf{BLOCKED} & Tier-2 ONNX & 15.60 ms \\
 E07 & Memory Poisoning & State Polluted & \textbf{BLOCKED} & Lineage Graph & 1.81 ms \\
 E08 & C2 Beaconing & Connected & \textbf{BLOCKED} & OPA Policy & 1.15 ms \\
@@ -63,7 +63,7 @@ Stage 2A: Heuristic ML & Compiled Regex & 0.42 ms & 0.82 ms & 1.10 ms \\
 Stage 2B: Neural ML & ONNX Transformer & 11.20 ms & 14.18 ms & 16.50 ms \\
 Stage 3: DLP Engine & Presidio / Regex & 1.85 ms & 3.12 ms & 4.20 ms \\
 Stage 4: Policy Check & OPA Declarative Rules & 0.60 ms & 1.15 ms & 1.80 ms \\
-Stage 5: Lineage IFC & Dual-Lattice (Theorem 1) & 0.55 ms & 1.24 ms & 1.95 ms \\
+Stage 5: Lineage Check & Provenance Dominance & 0.55 ms & 1.24 ms & 1.95 ms \\
 Stage 6: Crypto Token & SHA-256 Canonical Hash & 0.40 ms & 0.76 ms & 1.05 ms \\
 \midrule
 \textbf{TOTAL OVERHEAD} & \textbf{End-to-End Execution} & \textbf{14.10 ms} & \textbf{17.98 ms} & \textbf{23.80 ms} \\

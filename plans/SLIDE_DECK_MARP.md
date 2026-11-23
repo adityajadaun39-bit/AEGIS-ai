@@ -88,31 +88,32 @@ style: |
 
 ---
 
-## 4. The AEGIS Solution: Dual-Lattice Information Flow Control
+## 4. The Idea Flow: Ingestion to Enforcement
 
-AEGIS is an **in-line execution gateway** enforcing two concurrent bounded lattices:
+The core conceptual breakthrough of AEGIS is **Provenance-First Taint Lineage**:
 
-1. **Confidentiality Lattice ($\mathcal{L}_{\text{conf}}$ - Denning 1976):**
-   $$\text{PUBLIC} \sqsubset_C \text{INTERNAL} \sqsubset_C \text{CONFIDENTIAL} \sqsubset_C \text{RESTRICTED}$$
-   *Flow permitted if and only if:* $L_{\text{src}} \sqsubseteq_C L_{\text{dst}}$
+1. **The Human Approval Trap:**
+   * Compromised agents generate convincing, routine justification dialogues.
+   * Fatigued or deceived operators click "Approve" on poisoned actions.
+   * Traditional security systems fail open because approval is treated as absolute truth.
 
-2. **Integrity Lattice ($\mathcal{L}_{\text{integ}}$ - Biba 1977):**
-   $$\text{UNTRUSTED} \sqsubset_I \text{LOW} \sqsubset_I \text{MEDIUM} \sqsubset_I \text{HIGH} \sqsubset_I \text{SYSTEM}$$
-   *Contamination Principle:* $\text{integrity}(A \cup B) = \text{integrity}(A) \sqcap_I \text{integrity}(B)$
+2. **The AEGIS Provenance Dominance Axiom:**
+   * **"Data Provenance Strictly Dominates Human Approval."**
+   * When an agent consumes untrusted data (PDFs, emails, web scraping), its execution session inherits an indelible `UNTRUSTED` taint.
+   * If a privileged sink (network dispatch, database drop, secret transfer) requires trusted input, the gateway evaluates the causal origin of the payload.
+   * Even with human approval, the tainted lineage **dominates and overrides** the approval $\rightarrow$ Request Denied.
 
 ---
 
-## 5. Theorem 1: Provenance Dominance Invariant
+## 5. System Design Architecture: High-Availability Reverse Proxy
 
-> ### **Core Mathematical Innovation:**
-> **No human approval token ($\tau_{\text{HITL}}$) can authorize action $a$ if:**
-> $$I_{\text{prov}}(a) \sqsubset_I I_{\text{req}}(a) \quad \lor \quad \exists v \in \text{Lineage}(a) \text{ such that } \text{is\_tainted}(v) = \text{True}$$
+AEGIS operates as an **in-line reverse proxy** delivering zero-latency policy enforcement:
 
-* **What this means in practice:**
-  * Even if an attacker socially engineers a human into signing an approval token,
-  * AEGIS traces the causal provenance graph ($G_a$).
-  * The untrusted document provenance **dominates and nullifies** the human sign-off.
-  * **The gateway fails closed.**
+* **Zero-Code Agent Integration:** Transparently proxies LangChain, AutoGen, CrewAI, and OpenAI tool-calling loops.
+* **Ingress Identity Verification:** HMAC-SHA256 signature verification (<1ms) authenticates calling agents and enforces per-agent rate limits.
+* **Causal Lineage DAG:** Real-time directed acyclic graph tracking session taint propagation across multi-hop reasoning chains.
+* **Cryptographic Action Broker:** Pre-computes canonical SHA-256 tokens binding `(agent_id, tool, payload_hash, session_id, timestamp)`, defeating TOCTOU attacks.
+* **Isolated Tool Sandbox:** Validated operations execute in isolated subprocesses; blocked actions terminate with HTTP 403 Forbidden.
 
 ---
 
@@ -141,7 +142,7 @@ To eliminate perceptual latency in agent reasoning loops:
  |  [1. Provenance Tracker]   -> Calculates Join / Meet    |
  |  [2. Tier-1 Regex Scanner] -> Sub-2ms Heuristic Check   |
  |  [3. Tier-2 ONNX Model]    -> Local Neural Classifier   |
- |  [4. Dual-Lattice Policy]  -> Theorem 1 Enforcement     |
+ |  [4. Causal Lineage Policy]-> Provenance Dominance      |
  |  [5. Cryptographic Store]  -> HMAC-SHA256 Token Binding |
  +---------------------------------------------------------+
          |                                    |
@@ -205,9 +206,9 @@ To eliminate perceptual latency in agent reasoning loops:
 | Feature | Vanilla LangGraph | NeMo Guardrails | Llama Guard 3 | **AEGIS (Ours)** |
 |---|---|---|---|---|
 | **Defense Layer** | Application Prompt | Pre-LLM Rail | Input/Output LLM | **In-Line Gateway** |
-| **Formal IFC Lattice** | ❌ No | ❌ No | ❌ No | **✅ Yes (Denning/Biba)** |
-| **Provenance Tracking** | ❌ No | ❌ No | ❌ No | **✅ Causal DAG** |
-| **Provenance Overrides Human** | ❌ No | ❌ No | ❌ No | **✅ Theorem 1** |
+| **Causal Taint Lineage** | ❌ No | ❌ No | ❌ No | **✅ Causal Lineage DAG** |
+| **Provenance Tracking** | ❌ No | ❌ No | ❌ No | **✅ Session Lineage Graph** |
+| **Provenance Overrides Human** | ❌ No | ❌ No | ❌ No | **✅ Provenance Dominance Invariant** |
 | **DLP Secret Scanning** | ❌ No | ⚠️ Partial | ❌ No | **✅ Built-in Sub-2ms** |
 | **Evaluation Latency** | 0 ms | 200–800 ms | 150–500 ms | **✅ < 25 ms** |
 | **Cloud Dependencies** | Cloud Dependent | Cloud Dependent | Cloud Dependent | **✅ Zero (Local ONNX)** |
@@ -228,9 +229,9 @@ To eliminate perceptual latency in agent reasoning loops:
 
 ## 13. Team Contributions & Division of Labor
 
-* **Farhan (Team Lead):** System Architecture, Formal Lattice Engine (`ifc_lattice.py`), Security Proofs & Academic Paper.
+* **Farhan (Team Lead):** System Architecture, Reverse Proxy Gateway & Cryptographic Token Binding.
 * **Member 2:** Threat Detection Engine (`ml_detector.py`), ONNX Optimization, DLP Engine (`dlp_engine.py`).
-* **Member 3:** Policy Engineering (`policy_engine.py`), Declarative YAML/OPA Rules, Zero-Trust Compliance.
+* **Member 3:** Policy Engineering (`policy_engine.py`), Causal Lineage DAG, Declarative YAML/OPA Rules.
 * **Member 4:** DevOps, Reproducibility Packaging (`pyproject.toml`), Concurrency Harness (`run_load_test.py`), CI/CD.
 * **Member 5:** Full-Stack SOC Console (`dashboard.py`), Lineage DAG Visualization, Presentation & Demo Coordination.
 

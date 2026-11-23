@@ -49,9 +49,9 @@ The functional capabilities of the gateway include:
     \item \textbf{FR1: Ingress Authentication \& Throttling:} Verifying agent identity via HMAC-SHA256 bearer tokens.
     \item \textbf{FR2: Dual-Tier Prompt Injection Detection:} Combining sub-millisecond regex signatures with neural ONNX classifiers.
     \item \textbf{FR3: Data Loss Prevention (DLP):} Automated redaction and blocking of AWS keys, private certificates, and customer PII.
-    \item \textbf{FR4: Dual-Lattice Lineage Tracking:} Maintaining session-level confidentiality and integrity levels across multi-step execution traces.
+    \item \textbf{FR4: Causal Taint Lineage Tracking:} Maintaining session-level confidentiality and integrity levels across multi-step execution traces.
     \item \textbf{FR5: Cryptographic Approval Tokens:} Generating canonical SHA-256 tokens binding action parameters to human approval requests.
-    \item \textbf{FR6: Provenance-Dominated Approval:} Enforcing Theorem 1 to override human approval when session memory is tainted.
+    \item \textbf{FR6: Provenance-Dominated Approval:} Enforcing the Provenance Dominance Invariant to override human approval when session memory is tainted.
     \item \textbf{FR7: Asynchronous Audit Logging:} Writing structured JSON events to a high-concurrency database.
 \end{itemize}
 

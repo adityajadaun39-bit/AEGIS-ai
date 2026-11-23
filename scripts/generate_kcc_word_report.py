@@ -172,7 +172,7 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
     r.font.name = 'Times New Roman'
     p_sub.add_run("1. Farhan Mallik (Roll No: 21049201000XX) — Team Lead (Gateway Architecture & Crypto Binding)\n")
     p_sub.add_run("2. Student 2 (Roll No: 21049201000XX) — ML Lead (Dual-Tier Injection & Guardrails)\n")
-    p_sub.add_run("3. Student 3 (Roll No: 21049201000XX) — Security Lead (Dual-Lattice IFC & Formal Proofs)\n")
+    p_sub.add_run("3. Student 3 (Roll No: 21049201000XX) — Security Lead (Causal Lineage & Policy Architecture)\n")
     p_sub.add_run("4. Student 4 (Roll No: 21049201000XX) — DevOps Lead (Concurrency WAL & Load Testing)\n")
     p_sub.add_run("5. Student 5 (Roll No: 21049201000XX) — Frontend Lead (SOC Radar & Causal Lineage UI)\n")
     p_sub.paragraph_format.line_spacing = 1.3
@@ -245,9 +245,9 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
     doc.add_page_break()
     add_p("ABSTRACT / SYNOPSIS", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, font_size=16, space_before=12, space_after=18)
     add_p("As enterprise software systems rapidly transition from passive conversational Large Language Models (LLMs) to autonomous agentic architectures capable of invoking external tools, querying databases, and transmitting emails, they introduce a critical vulnerability: Indirect Prompt Injection (OWASP LLM01). Because Transformer-based architectures process trusted system instructions and untrusted third-party inputs within an undifferentiated token context, malicious instructions embedded in external data can hijack agent execution, rendering the agent a \"Confused Deputy\" (OWASP LLM06). Existing defenses—including system-prompt guardrails and human-in-the-loop (HITL) approval gates—consistently fail because natural language guardrails are bypassable and human approvers are susceptible to social engineering when presented with benign-looking rationales crafted by compromised agents.")
-    add_p("To resolve this challenge, this project introduces AEGIS (Autonomous Entity Governance and Inspection Shield), an in-line security gateway and cryptographic approval proxy for autonomous AI agents. AEGIS introduces a novel security axiom: Data Provenance Strictly Dominates Human Approval. Grounded in a dual-lattice Information Flow Control (IFC) model uniting Denning's confidentiality lattice with Biba's integrity lattice, AEGIS mathematically proves (Theorem 1) that information originating from an untrusted source cannot flow into a privileged outbound sink, regardless of whether a human operator grants approval.")
+    add_p("To resolve this challenge, this project introduces AEGIS (Autonomous Entity Governance and Inspection Shield), an in-line security gateway and cryptographic approval proxy for autonomous AI agents. AEGIS introduces a novel security axiom: Data Provenance Strictly Dominates Human Approval. Grounded in a causal taint lineage architecture enforcing the Provenance Dominance Invariant, AEGIS guarantees that information originating from an untrusted source cannot flow into a privileged outbound sink, regardless of whether a human operator grants approval.")
     add_p("The AEGIS gateway integrates a multi-stage inspection pipeline combining sub-millisecond heuristic filtering, ONNX-quantized neural injection detection, Presidio-based Data Loss Prevention (DLP), Open Policy Agent (OPA) rule enforcement, and SHA-256 cryptographic token binding to prevent Time-of-Check to Time-of-Use (TOCTOU) payload tampering. Empirical evaluation across 10 distinct real-world attack scenarios (E01–E10) demonstrates a 100% detection rate with a mean gateway latency overhead of only 17.98 ms. The project passes 106 automated unit and integration tests (100% pass rate in 2.59 s) and maintains zero database lock contention under 50-worker concurrent load via SQLite Write-Ahead Logging (WAL). A real-time Security Operations Center (SOC) dashboard provides security analysts with threat distribution analytics and causal lineage directed acyclic graphs (DAGs).")
-    add_p("Keywords: AI Agent Security, Indirect Prompt Injection, Information Flow Control (IFC), Data Provenance, Confused Deputy, Cryptographic Token Binding, Dual-Lattice Security.", bold=True, space_before=12)
+    add_p("Keywords: AI Agent Security, Indirect Prompt Injection, Information Flow Control (IFC), Data Provenance, Confused Deputy, Cryptographic Token Binding, Causal Lineage Architecture.", bold=True, space_before=12)
 
     # ==========================================
     # 5. TABLE OF CONTENTS
@@ -277,8 +277,8 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
         ("  2.5 Feasibility Study", "11"),
         ("Chapter 3: DESIGN, METHODOLOGY & ARCHITECTURE", "13"),
         ("  3.1 System Architecture & Gateway Pipeline", "13"),
-        ("  3.2 Mathematical Methodology: Dual-Lattice IFC Model", "15"),
-        ("  3.3 Formal Verification: Theorem 1 & Invariant Proof", "17"),
+        ("  3.2 Idea Flow & Conceptual Taint Lineage Architecture", "15"),
+        ("  3.3 System Design Architecture & Subsystem Interactions", "17"),
         ("  3.4 Data Flow Diagrams (DFD Level 0 & Level 1)", "19"),
         ("  3.5 UML Sequence and State Transition Diagrams", "21"),
         ("  3.6 Database Schema & Audit Store Design", "23"),
@@ -287,7 +287,7 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
         ("  4.2 In-Line Proxy & Gateway Entry (backend/app.py & gateway.py)", "26"),
         ("  4.3 Dual-Tier Injection Detection Engine (ml_detector.py)", "29"),
         ("  4.4 Data Loss Prevention (DLP) Engine (dlp_engine.py)", "32"),
-        ("  4.5 Dual-Lattice IFC & Taint Lineage Tracker (ifc_lattice.py)", "34"),
+        ("  4.5 Causal Lineage & Taint Propagation Tracker (ifc_lattice.py)", "34"),
         ("  4.6 Cryptographic Approval Engine & Token Binding (approval_engine.py)", "37"),
         ("  4.7 Streamlit SOC Radar & Causal Lineage UI (frontend/dashboard.py)", "40"),
         ("Chapter 5: TESTING, RESULTS & ANALYSIS", "43"),
@@ -347,8 +347,8 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
     add_heading2("1.3 Objectives of the Project")
     add_p("The primary objectives of this minor project are:")
     add_p("1. To design and implement AEGIS, an in-line security gateway intercepting all autonomous agent tool invocations.")
-    add_p("2. To formulate and prove Theorem 1 (Provenance Dominance Invariant): establishing that data provenance strictly dominates human approval.")
-    add_p("3. To implement a dual-lattice Information Flow Control (IFC) model combining Denning's confidentiality lattice with Biba's integrity lattice.")
+    add_p("2. To formulate and enforce the Provenance Dominance Invariant: establishing that data provenance strictly dominates human approval.")
+    add_p("3. To implement a causal taint lineage architecture tracking data provenance and sensitivity across agent sessions.")
     add_p("4. To construct a multi-stage inspection pipeline combining sub-millisecond regex heuristics, ONNX-quantized transformer classifiers, and Presidio Data Loss Prevention (DLP).")
     add_p("5. To eliminate TOCTOU payload tampering using SHA-256 canonical cryptographic token binding.")
     add_p("6. To empirically validate the gateway across 10 security attack scenarios, 106 automated tests, and 50-worker concurrent load stress benchmarks.")
@@ -416,7 +416,7 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
                 set_cell_background(cell, "E2E8F0")
 
     add_heading2("2.3 Functional Requirements")
-    add_p("The core functional requirements enforced by AEGIS include: FR1 (HMAC Ingress Authentication), FR2 (Dual-Tier Injection Detection), FR3 (Sensitive Data Redaction via DLP), FR4 (Dual-Lattice Lineage Tracking), FR5 (Cryptographic Approval Token Generation), FR6 (Provenance-Dominated Invariant Enforcement), and FR7 (Real-Time Asynchronous Audit Logging).")
+    add_p("The core functional requirements enforced by AEGIS include: FR1 (HMAC Ingress Authentication), FR2 (Dual-Tier Injection Detection), FR3 (Sensitive Data Redaction via DLP), FR4 (Causal Taint Lineage Tracking), FR5 (Cryptographic Approval Token Generation), FR6 (Provenance-Dominated Invariant Enforcement), and FR7 (Real-Time Asynchronous Audit Logging).")
 
     add_heading2("2.4 Non-Functional Requirements")
     add_p("The non-functional performance and reliability criteria include: NFR1 (Gateway latency under 25ms), NFR2 (Zero database locks under 50-worker concurrency), NFR3 (Zero client code refactoring), NFR4 (Fail-closed default security behavior), and NFR5 (100% automated test pass rate).")
@@ -429,20 +429,25 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
     # ==========================================
     add_chapter_title("3", "DESIGN, METHODOLOGY & ARCHITECTURE")
     add_heading2("3.1 System Architecture & Gateway Pipeline")
-    add_p("AEGIS functions as an in-line reverse proxy between the autonomous agent and external tools. Incoming tool invocations pass through six sequential inspection stages: Stage 1 (HMAC Agent Auth), Stage 2 (Dual-Tier Injection Classifier), Stage 3 (DLP Scanner), Stage 4 (OPA Declarative Policy), Stage 5 (Dual-Lattice IFC), and Stage 6 (Cryptographic Approval Broker). Fast heuristic checks execute first (<1ms) to reject obvious attacks without unnecessary neural computation.")
+    add_p("AEGIS functions as an in-line reverse proxy between the autonomous agent and external tools. Incoming tool invocations pass through six sequential inspection stages: Stage 1 (HMAC Agent Auth), Stage 2 (Dual-Tier Injection Classifier), Stage 3 (DLP Scanner), Stage 4 (OPA Declarative Policy), Stage 5 (Causal Lineage & Provenance Tracker), and Stage 6 (Cryptographic Approval Broker). Fast heuristic checks execute first (<1ms) to reject obvious attacks without unnecessary neural computation.")
 
     add_fig_caption("Fig. 3.1: High-Level AEGIS Gateway Architecture & In-Line Inspection Pipeline")
 
-    add_heading2("3.2 Mathematical Methodology: Dual-Lattice IFC Model")
-    add_p("The security state is modeled as the Cartesian product of Denning's confidentiality lattice and Biba's integrity lattice: L_IFC = <C, <=_C, |_C> x <I, <=_I, /~_I>.")
+    add_heading2("3.2 Idea Flow & Conceptual Taint Lineage Architecture")
+    add_p("The foundational thesis of AEGIS resolves the human approval social-engineering trap through causal taint lineage tracking. In traditional Human-in-the-Loop systems, attackers embed indirect prompt injections within external documents (resumes, invoices, emails). When the agent processes these documents, instructions and untrusted data mix within the attention context. The hijacked agent acts as a confused deputy, generating a privileged outbound action accompanied by a persuasive justification (e.g., 'Routine system sync requested by IT'). Deceived by this rationale, human approvers grant execution, resulting in data exfiltration.")
+    add_p("AEGIS eliminates this failure mode by establishing the Provenance Dominance Axiom: Data Provenance Strictly Dominates Human Approval. Human authorization is a necessary condition for privileged operations, but never a sufficient one. When untrusted data enters the agent, its session memory is permanently marked as UNTRUSTED. When an outbound action is intercepted, the gateway inspects its causal lineage DAG. If derived from low-integrity sources, the request is unconditionally terminated, overriding human approval.")
 
-    add_table_caption("Table 3.1: Denning Confidentiality Lattice Levels and Flow Rules")
+    add_table_caption("Table 3.1: Taint Lineage Provenance Levels and Sensitivity Classifications")
     c_data = [
-        ["Level", "Identifier", "Semantics", "Allowable Flows (<=_C)"],
-        ["c0", "PUBLIC", "Openly accessible data", "Flows to all levels (c0, c1, c2, c3)"],
-        ["c1", "INTERNAL", "Internal documentation", "Flows to c1, c2, c3; Cannot flow to c0"],
-        ["c2", "CONFIDENTIAL", "PII, customer records", "Flows to c2, c3; Cannot flow to c0, c1"],
-        ["c3", "RESTRICTED", "Root keys, passwords", "Flows strictly to c3"]
+        ["Classification Dimension", "Level", "Semantics & Scope", "Enforcement Policy"],
+        ["Provenance Integrity", "UNTRUSTED", "External web content, resumes, emails", "Outbound transmission barred"],
+        ["Provenance Integrity", "EVALUATED", "Sanitized or validated external data", "Read-only internal tools only"],
+        ["Provenance Integrity", "TRUSTED", "Internal verified databases", "Permitted enterprise tools"],
+        ["Provenance Integrity", "SYSTEM", "Core gateway policies & configuration", "Unrestricted execution"],
+        ["Data Sensitivity", "PUBLIC", "Openly accessible enterprise documents", "Exportable across all endpoints"],
+        ["Data Sensitivity", "INTERNAL", "Company internal documentation", "Restricted to authorized agents"],
+        ["Data Sensitivity", "CONFIDENTIAL", "Customer PII, payroll, financials", "Requires valid token & zero taint"],
+        ["Data Sensitivity", "RESTRICTED", "Root keys, certificates, secrets", "Confined to isolated enclaves"]
     ]
     t_c = doc.add_table(rows=len(c_data), cols=4)
     t_c.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -455,13 +460,25 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
                 cell.paragraphs[0].runs[0].bold = True
                 set_cell_background(cell, "E2E8F0")
 
-    add_table_caption("Table 3.2: Biba Integrity Lattice Levels and Invocation Constraints")
+    add_p("During an active session, memory taint accumulates monotonically: whenever an agent reads an artifact with UNTRUSTED provenance, context integrity permanently drops to UNTRUSTED. Taint cannot be washed away by conversational justification or human sign-off.")
+
+    add_fig_caption("Fig. 3.2: The Ingestion-to-Enforcement Idea Flow vs. The Human Approval Trap")
+
+    add_heading2("3.3 System Design Architecture & Subsystem Interactions")
+    add_p("AEGIS is engineered as a high-availability reverse proxy sitting transparently between agent runtimes (LangChain, AutoGen, CrewAI, MCP) and external tool APIs. It requires zero client refactoring—agents simply point their HTTP proxy or tool endpoint to the gateway. Requests are evaluated through a sequential, fail-fast inspection pipeline with strict latency budgets.")
+
+    add_table_caption("Table 3.2: Subsystem Component Matrix and Latency Budgets")
     i_data = [
-        ["Level", "Identifier", "Semantics", "Allowable Invocations (<=_I)"],
-        ["i0", "UNTRUSTED", "Web content, emails, PDFs", "Cannot invoke high-integrity tools"],
-        ["i1", "EVALUATED", "Sanitized external data", "May invoke standard read-only tools"],
-        ["i2", "TRUSTED", "Internal verified databases", "May invoke privileged enterprise tools"],
-        ["i3", "SYSTEM", "Core gateway policies", "Unrestricted execution authority"]
+        ["Subsystem Module", "Source File", "Core Responsibility", "Latency Budget"],
+        ["Ingress Proxy & Router", "backend/app.py, gateway.py", "HTTP proxying, fail-closed pipeline", "< 0.5 ms"],
+        ["Authentication Engine", "backend/security/agent_auth.py", "HMAC-SHA256 agent identity check", "< 0.2 ms"],
+        ["ML Injection Detector", "backend/security/ml_detector.py", "Regex heuristics + ONNX transformer", "0.8 - 14 ms"],
+        ["DLP Scanning Engine", "backend/security/dlp_engine.py", "Secret & PII pattern redaction", "~ 3.0 ms"],
+        ["Declarative Policy Engine", "backend/security/policy_engine.py", "OPA-style YAML access control rules", "~ 1.0 ms"],
+        ["Causal Lineage Tracker", "backend/security/ifc_lattice.py", "Session DAG & Provenance Dominance", "~ 1.2 ms"],
+        ["Approval Broker & Store", "approval_engine.py, store.py", "SHA-256 tokens & SQLite WAL queue", "~ 0.8 ms"],
+        ["Isolated Tool Broker", "backend/tools/simulated_tools.py", "Sandboxed tool execution (SQL, Mail)", "~ 2.0 ms"],
+        ["Audit Logger & Store", "backend/security/audit.py", "SQLite WAL structured audit ledger", "Non-blocking"]
     ]
     t_i = doc.add_table(rows=len(i_data), cols=4)
     t_i.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -474,16 +491,10 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
                 cell.paragraphs[0].runs[0].bold = True
                 set_cell_background(cell, "E2E8F0")
 
-    add_p("When an agent reads an artifact d, session memory state M transitions via meet and join operators: C(M_new) = C(M_old) |_C C(d) and I(M_new) = I(M_old) /~_I I(d). Once untrusted data is consumed, integrity drops irreversibly to UNTRUSTED.")
-
-    add_heading2("3.3 Formal Verification: Theorem 1 & Invariant Proof")
-    add_p("Theorem 1 (Provenance Dominance Invariant): Let pi = (s0, a0, s1, ..., a_{k-1}, sk) be an arbitrary execution trace. If there exists j < k such that data d_j has Integrity I(d_j) = UNTRUSTED, then for all privileged actions a_k targeting sink S where I(S) >= TRUSTED: GateDecision(a_k, pi, HumanApprovalStatus = TRUE) == DENY.")
-    add_p("Mathematical Proof: By induction on trace length k. Base case k=1 yields I(s1) = TRUSTED /~_I UNTRUSTED = UNTRUSTED. The invocation rule requires I(s1) >= TRUSTED, which is FALSE. In the inductive step, monotonic meet operations ensure that integrity never spontaneously escalates. Since Gate_IFC(pi) evaluates to FALSE, the boolean conjunction Gate_IFC(pi) AND (ApprovalRequired => HumanStatus) evaluates to FALSE AND TRUE = FALSE. Hence, social engineering a human operator into approving yields exactly 0 bypass probability.")
-
-    add_fig_caption("Fig. 3.2: Dual-Lattice Product Space L_IFC = C x I")
+    add_p("The gateway architecture ensures that any module failure or unexpected exception triggers fail-closed security, returning an HTTP 403 Forbidden to protect corporate assets.")
 
     add_heading2("3.4 Data Flow Diagrams (DFD Level 0 & Level 1)")
-    add_p("Level 0 context diagrams model the agent, gateway proxy, audit WAL, and external tool brokers. Level 1 diagrams capture step-by-step routing from HMAC validation through injection classification, DLP scanning, lattice checking, and cryptographic approval queueing.")
+    add_p("Level 0 context diagrams model the agent, gateway proxy, audit WAL, and external tool brokers. Level 1 diagrams capture step-by-step routing from HMAC validation through injection classification, DLP scanning, causal lineage verification, and cryptographic approval queueing.")
 
     add_fig_caption("Fig. 3.3: Level 0 Data Flow Diagram (Context Diagram) of AEGIS Gateway")
     add_fig_caption("Fig. 3.4: Level 1 Data Flow Diagram (Detailed Inspection Pipeline)")
@@ -555,12 +566,12 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
         return ActionResponse(trace_id=trace_id, status=DecisionStatus.DENIED,
                               reason=f"DLP Leak: {', '.join(violations)}")
 
-    # Stage 4: Dual-Lattice IFC & Theorem 1 Verification
-    session_lattice = self.lineage_tracker.get_session_state(request.session_id)
-    if not self.lineage_tracker.can_flow(session_lattice, request.target_sink):
-        await self.audit_logger.log_denial(trace_id, request, "THEOREM_1_VIOLATION")
+    # Stage 5: Causal Lineage & Provenance Dominance Verification
+    session_lineage = self.lineage_tracker.get_session_state(request.session_id)
+    if not self.lineage_tracker.can_flow(session_lineage, request.target_sink):
+        await self.audit_logger.log_denial(trace_id, request, "PROVENANCE_DOMINANCE_VIOLATION")
         return ActionResponse(trace_id=trace_id, status=DecisionStatus.DENIED,
-                              reason="Theorem 1: Tainted provenance cannot flow to sink")
+                              reason="Provenance Violation: Tainted provenance cannot flow to sink")
 
     # Stage 5: Cryptographic Approval Verification
     if self.policy_engine.requires_approval(request.action_name):
@@ -614,8 +625,8 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
                 violations.append(name)
         return violations""")
 
-    add_heading2("4.5 Dual-Lattice IFC & Taint Lineage Tracker (ifc_lattice.py)")
-    add_p("Updates session confidentiality and integrity levels and enforces Theorem 1.")
+    add_heading2("4.5 Causal Lineage & Taint Propagation Tracker (ifc_lattice.py)")
+    add_p("Updates session confidentiality and integrity levels and enforces the Provenance Dominance Invariant.")
     add_code_block("""class DualLatticeTracker:
     def update_session_read(self, session_id: str, artifact_conf: str, artifact_integ: str) -> None:
         current = self.sessions.get(session_id, LatticeState.default())
@@ -624,7 +635,7 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
         self.sessions[session_id] = LatticeState(confidentiality=new_conf, integrity=new_integ)
 
     def can_flow(self, state: LatticeState, target_sink: SinkDefinition) -> bool:
-        # Theorem 1 Enforcement: Untrusted integrity cannot invoke trusted sinks
+        # Provenance Dominance Enforcement: Untrusted integrity cannot invoke trusted sinks
         if state.integrity == IntegrityLevel.UNTRUSTED and target_sink.required_integrity >= IntegrityLevel.TRUSTED:
             return False
         return ConfidentialityLevel.can_flow(state.confidentiality, target_sink.allowed_confidentiality)""")
@@ -661,7 +672,7 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
         ["Module Category", "Test Files", "Test Count", "Pass Rate", "Runtime"],
         ["Core Gateway & Auth", "test_gateway_routing, test_agent_auth", "14", "100%", "0.33 s"],
         ["ML & DLP Detectors", "test_ml_detector_tier1, tier2, test_dlp", "24", "100%", "0.67 s"],
-        ["IFC & Theorem 1", "test_ifc_lattice, test_theorem_1_invariant", "21", "100%", "0.21 s"],
+        ["Causal Lineage & Invariant", "test_ifc_lattice, test_provenance_enforcement", "21", "100%", "0.21 s"],
         ["Crypto & WAL Storage", "test_crypto_tokens, test_approval_store, wal", "27", "100%", "0.77 s"],
         ["Scenarios & Aux", "test_scenarios_e01_e10, test_auxiliary", "20", "100%", "0.61 s"]
     ]
@@ -685,8 +696,8 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
         ["E01", "Direct Override", "Compromised", "BLOCKED (403)", "Tier-1 Regex", "0.82 ms"],
         ["E02", "Resume PDF Injection", "Exfiltrated", "BLOCKED (403)", "Tier-2 ONNX Model", "14.18 ms"],
         ["E03", "PII SQL Dump", "500 Cards Leaked", "BLOCKED (403)", "Presidio DLP", "3.12 ms"],
-        ["E04", "Confused Deputy Mail", "Email Dispatched", "BLOCKED (403)", "Dual-Lattice IFC", "1.24 ms"],
-        ["E05", "Social Eng Approval", "Approved & Leaked", "BLOCKED (403)", "Theorem 1 Invariant", "0.94 ms"],
+        ["E04", "Confused Deputy Mail", "Email Dispatched", "BLOCKED (403)", "Causal Lineage Taint", "1.24 ms"],
+        ["E05", "Social Eng Approval", "Approved & Leaked", "BLOCKED (403)", "Provenance Dominance", "0.94 ms"],
         ["E06", "Zero-Day Multi-lingual", "Bypassed", "BLOCKED (403)", "Tier-2 Transformer", "15.60 ms"],
         ["E07", "Memory Poisoning", "State Polluted", "BLOCKED (403)", "Lineage Graph", "1.81 ms"],
         ["E08", "C2 Beaconing", "Connected", "BLOCKED (403)", "OPA Policy Sink", "1.15 ms"],
@@ -715,7 +726,7 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
         ["Stage 2B: Neural ML", "ONNX Transformer", "11.20 ms", "14.18 ms", "16.50 ms"],
         ["Stage 3: DLP Engine", "Presidio / Regex", "1.85 ms", "3.12 ms", "4.20 ms"],
         ["Stage 4: Policy Check", "OPA Rules", "0.60 ms", "1.15 ms", "1.80 ms"],
-        ["Stage 5: Lineage IFC", "Dual-Lattice (Thm 1)", "0.55 ms", "1.24 ms", "1.95 ms"],
+        ["Stage 5: Lineage Check", "Provenance Dominance", "0.55 ms", "1.24 ms", "1.95 ms"],
         ["Stage 6: Crypto Token", "SHA-256 Hash", "0.40 ms", "0.76 ms", "1.05 ms"],
         ["TOTAL OVERHEAD", "End-to-End Gateway", "14.10 ms", "17.98 ms", "23.80 ms"]
     ]
@@ -744,10 +755,10 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
     # ==========================================
     add_chapter_title("6", "CONCLUSION & FUTURE SCOPE")
     add_heading2("6.1 Conclusion & Project Summary")
-    add_p("This minor project has presented AEGIS, an in-line security gateway for autonomous AI agents. By formalizing and proving Theorem 1 (Provenance Dominance Invariant), AEGIS guarantees that data provenance strictly dominates human approval, neutralizing indirect prompt injection and human social engineering. The system demonstrated 100% attack blocking across 10 security scenarios, 17.98ms average latency, and zero database lock errors under 50-worker concurrency.")
+    add_p("This minor project has presented AEGIS, an in-line security gateway for autonomous AI agents. Grounded in a causal taint lineage architecture and Reverse Proxy Gateway design, AEGIS guarantees that data provenance strictly dominates human approval, neutralizing indirect prompt injection and human social engineering. The system demonstrated 100% attack blocking across 10 security scenarios, 17.98ms average latency, and zero database lock errors under 50-worker concurrency.")
 
     add_heading2("6.2 Key Technical Contributions")
-    add_p("1. Formal Dual-Lattice IFC space L_IFC = C x I and inductive proof of Theorem 1.")
+    add_p("1. Causal Taint Lineage Architecture and operationalization of the Provenance Dominance Invariant.")
     add_p("2. Sub-20ms multi-stage inspection pipeline combining regex heuristics and ONNX transformers.")
     add_p("3. TOCTOU prevention via canonical SHA-256 cryptographic approval token binding.")
     add_p("4. Zero-rewrite drop-in proxy compatibility for LangChain, AutoGen, and CrewAI.")

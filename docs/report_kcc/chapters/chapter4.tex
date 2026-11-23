@@ -7,7 +7,7 @@ The implementation codebase is structured into modular Python packages:
     \item \texttt{backend/security/gateway.py}: Core sequential inspection pipeline orchestrator.
     \item \texttt{backend/security/ml\_detector.py}: Dual-Tier regex and ONNX neural classifier.
     \item \texttt{backend/security/dlp\_engine.py}: Presidio and regex Data Loss Prevention scanner.
-    \item \texttt{backend/security/ifc\_lattice.py}: Dual-Lattice state tracker and Theorem 1 engine.
+    \item \texttt{backend/security/ifc\_lattice.py}: Causal lineage tracker and provenance dominance engine.
     \item \texttt{backend/security/approval\_engine.py}: Cryptographic SHA-256 approval token manager.
     \item \texttt{frontend/dashboard.py}: Streamlit SOC Threat Radar and Causal Lineage visualizer.
 \end{itemize}
@@ -39,12 +39,12 @@ async def process_action(self, request: ActionRequest) -> ActionResponse:
         return ActionResponse(trace_id=trace_id, status=DecisionStatus.DENIED,
                               reason=f"DLP Leak: {', '.join(violations)}")
 
-    # Stage 4: Dual-Lattice IFC & Theorem 1 Verification (1.2ms)
-    session_lattice = self.lineage_tracker.get_session_state(request.session_id)
-    if not self.lineage_tracker.can_flow(session_lattice, request.target_sink):
-        await self.audit_logger.log_denial(trace_id, request, "THEOREM_1_VIOLATION")
+    # Stage 5: Causal Lineage & Provenance Dominance Verification (1.2ms)
+    session_lineage = self.lineage_tracker.get_session_state(request.session_id)
+    if not self.lineage_tracker.can_flow(session_lineage, request.target_sink):
+        await self.audit_logger.log_denial(trace_id, request, "PROVENANCE_DOMINANCE_VIOLATION")
         return ActionResponse(trace_id=trace_id, status=DecisionStatus.DENIED,
-                              reason="Theorem 1: Tainted provenance cannot flow to sink")
+                              reason="Provenance Violation: Tainted provenance cannot flow to sink")
 
     # Stage 5: Cryptographic Approval Verification
     if self.policy_engine.requires_approval(request.action_name):

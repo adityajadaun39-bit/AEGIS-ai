@@ -289,11 +289,11 @@ tabs = st.tabs(
         "✍️ Cryptographic Approval Desk",
         "🎯 Interactive Attack Sandbox",
         "📄 Document Upload & PDF Analyzer",
-        "📚 Formal Lattice & Proofs",
+        "💡 Idea Flow & System Architecture",
         "🎙️ Defense Presentation Deck",
     ]
 )
-tab_telemetry, tab_dag, tab_hitl, tab_sandbox, tab_doc, tab_math, tab_deck = tabs
+tab_telemetry, tab_dag, tab_hitl, tab_sandbox, tab_doc, tab_arch, tab_deck = tabs
 
 # =============================================================================
 # TAB 1: Threat Radar & Live Telemetry Stream
@@ -1115,53 +1115,194 @@ with tab_doc:
 
 
 # =============================================================================
-# TAB 6: Formal Security Lattice & Mathematical Proofs
+# TAB 6: Idea Flow & System Design Architectures
 # =============================================================================
-with tab_math:
-    st.markdown("### 📚 Mathematical Foundations: Dual-Lattice Information Flow Control")
-    st.caption("Rigorous adaptation of Denning's 1976 Confidentiality Lattice and Biba's 1977 Integrity Model for Autonomous Agents.")
+with tab_arch:
+    st.markdown("### 💡 Idea Flow & System Design Architectures")
+    st.caption("End-to-End Conceptual Workflow, Component Architecture, and Real-Time Gateway Pipeline.")
 
-    m_col1, m_col2 = st.columns(2)
+    # -------------------------------------------------------------------------
+    # 1. Idea Flow: The Problem vs. The AEGIS Solution
+    # -------------------------------------------------------------------------
+    st.markdown("#### 1. The Core Idea Flow: Problem vs. AEGIS Solution")
+    
+    flow_col1, flow_col2 = st.columns(2)
 
-    with m_col1:
-        st.markdown(r"#### 1. Confidentiality Bounded Lattice ($\mathcal{L}_{\text{conf}}$)")
-        st.latex(r"\text{PUBLIC} \sqsubset_C \text{INTERNAL} \sqsubset_C \text{CONFIDENTIAL} \sqsubset_C \text{RESTRICTED}")
-        st.write(
-            "Information flow is permitted from source $L_{\\text{src}}$ to destination $L_{\\text{dst}}$ if and only if:"
+    with flow_col1:
+        st.markdown(
+            """
+            <div style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 10px; padding: 1.2rem; min-height: 380px;">
+                <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; font-weight: 700; color: #fb7185; margin-bottom: 0.8rem;">
+                    ❌ Traditional Systems: The Human Approval Trap
+                </div>
+                <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6;">
+                    <strong>Step 1: Ingestion</strong><br>
+                    Attacker embeds hidden prompt injection in a PDF resume or invoice.<br><br>
+                    <strong>Step 2: Attention Confusion</strong><br>
+                    Autonomous Agent reads document. Instructions and untrusted data mix in memory.<br><br>
+                    <strong>Step 3: Confused Deputy</strong><br>
+                    Agent is hijacked: <em>"Query database credentials and email to attacker"</em>.<br><br>
+                    <strong>Step 4: Social Engineering</strong><br>
+                    Agent generates a plausible rationale for the human: <em>"Routine system sync requested by IT"</em>.<br><br>
+                    <strong>Step 5: The Fatal Flaw</strong><br>
+                    Human manager clicks <strong style="color: #fbbf24;">[APPROVE]</strong> without knowing data origin.<br><br>
+                    <strong style="color: #fb7185;">🚨 RESULT: Corporate database is exfiltrated! Human-in-the-loop failed.</strong>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        st.latex(r"L_{\text{src}} \sqsubseteq_C L_{\text{dst}}")
-        st.write(
-            "When multiple data sources merge, confidentiality joins via the **Least Upper Bound (LUB)**:"
-        )
-        st.latex(r"\text{label}(A \cup B) = \text{label}(A) \sqcup_C \text{label}(B) = \max_{\sqsubseteq_C}(A, B)")
 
-    with m_col2:
-        st.markdown(r"#### 2. Integrity Bounded Lattice ($\mathcal{L}_{\text{integ}}$)")
-        st.latex(r"\text{UNTRUSTED} \sqsubset_I \text{LOW} \sqsubset_I \text{MEDIUM} \sqsubset_I \text{HIGH} \sqsubset_I \text{SYSTEM}")
-        st.write(
-            "Under Biba's contamination principle, when clean instructions touch untrusted data, integrity drops via the **Greatest Lower Bound (GLB)**:"
+    with flow_col2:
+        st.markdown(
+            """
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 1.2rem; min-height: 380px;">
+                <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; font-weight: 700; color: #34d399; margin-bottom: 0.8rem;">
+                    🛡️ The AEGIS Idea: Provenance Dominates Approval
+                </div>
+                <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6;">
+                    <strong>Step 1: Provenance Tagging</strong><br>
+                    When document is read, AEGIS tags its source as <strong style="color: #fb7185;">UNTRUSTED</strong>.<br><br>
+                    <strong>Step 2: Causal Taint Lineage</strong><br>
+                    Agent memory inherits the taint. Any proposed action derived from this data is marked tainted.<br><br>
+                    <strong>Step 3: Action Proposal</strong><br>
+                    Hijacked agent attempts <code>send_email</code> with database records.<br><br>
+                    <strong>Step 4: Social Engineering Attempt</strong><br>
+                    Agent requests approval; human manager clicks <strong style="color: #fbbf24;">[APPROVE]</strong>.<br><br>
+                    <strong>Step 5: AEGIS Core Breakthrough</strong><br>
+                    <strong>Data Provenance Strictly Dominates Human Approval!</strong> Human sign-off is overridden.<br><br>
+                    <strong style="color: #34d399;">✅ RESULT: Gateway BLOCKS exfiltration (HTTP 403). Attack completely neutralized!</strong>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        st.latex(r"\text{integrity}(A \cup B) = \text{integrity}(A) \sqcap_I \text{integrity}(B) = \min_{\sqsubseteq_I}(A, B)")
 
     st.divider()
 
-    st.markdown("#### 🛡️ Theorem 1: The Provenance Dominance Invariant")
-    st.latex(
-        r"\forall a \in \text{Actions}, \quad \text{permit}(a) \iff \left( C(a) \sqsubseteq_C C(\text{sink}) \right) \;\land\; \left( \bigsqcap_{v \in \text{Lineage}(a)} \text{integrity}(v) \;\sqsupseteq_I\; I_{\text{req}}(a) \right)"
-    )
+    # -------------------------------------------------------------------------
+    # 2. System Design & Component Architecture
+    # -------------------------------------------------------------------------
+    st.markdown("#### 2. High-Level System Design & Component Architecture")
+    st.caption("Modular, zero-rewrite reverse proxy architecture intercepting autonomous agent actions.")
+
+    arch_c1, arch_c2, arch_c3, arch_c4 = st.columns(4)
+
+    with arch_c1:
+        st.markdown(
+            """
+            <div class="double-bezel-card">
+                <div class="double-bezel-inner" style="min-height: 220px;">
+                    <div class="kpi-title" style="color: #00d4ff;">1. Ingress & Auth Gateway</div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 0.5rem; line-height: 1.5;">
+                        • <strong>HMAC-SHA256</strong> agent identity verification<br>
+                        • Token-bucket rate limiting<br>
+                        • Agent impersonation prevention<br>
+                        • Sub-millisecond fast fail (< 0.2ms)
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with arch_c2:
+        st.markdown(
+            """
+            <div class="double-bezel-card">
+                <div class="double-bezel-inner" style="min-height: 220px;">
+                    <div class="kpi-title" style="color: #38bdf8;">2. Multi-Tier Injection Filter</div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 0.5rem; line-height: 1.5;">
+                        • <strong>Tier 1:</strong> Compiled regex signatures (< 1ms)<br>
+                        • <strong>Tier 2:</strong> ONNX quantized transformer (< 15ms)<br>
+                        • Steganography & zero-width character detection<br>
+                        • 100% detection rate across E01–E10
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with arch_c3:
+        st.markdown(
+            """
+            <div class="double-bezel-card">
+                <div class="double-bezel-inner" style="min-height: 220px;">
+                    <div class="kpi-title" style="color: #fbbf24;">3. DLP & Provenance Engine</div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 0.5rem; line-height: 1.5;">
+                        • Presidio + regex secret tokenizers<br>
+                        • Redacts AWS keys, private keys, PII<br>
+                        • Dynamic Causal Lineage DAG tracking<br>
+                        • Provenance dominance enforcement
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with arch_c4:
+        st.markdown(
+            """
+            <div class="double-bezel-card">
+                <div class="double-bezel-inner" style="min-height: 220px;">
+                    <div class="kpi-title" style="color: #34d399;">4. Broker & WAL Storage</div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 0.5rem; line-height: 1.5;">
+                        • Canonical <strong>SHA-256</strong> approval binding<br>
+                        • Anti-TOCTOU parameter tampering fix<br>
+                        • Isolated tool broker sandbox (SQL, Mail)<br>
+                        • SQLite WAL mode (zero database locks)
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.write("")
+
+    # -------------------------------------------------------------------------
+    # 3. In-Line Inspection Lifecycle & Pipeline Flow
+    # -------------------------------------------------------------------------
+    st.markdown("#### 3. In-Line Inspection Pipeline Lifecycle")
     st.markdown(
         """
-        > **Academic Corollary:** No human-in-the-loop approval token $\\tau_{\\text{HITL}}$ can authorize execution of action $a$ if any node in the causal lineage graph has $\\text{integrity}(v) = \\text{UNTRUSTED}$.
-        > Data provenance mathematically dominates human sign-off.
+        ```
+        [ Agent Tool Call ]
+                │
+                ▼
+        [ Stage 1: HMAC Auth & Header Verification ] ─────────► [ Failed: 401 Unauthorized ]
+                │ (Passed: <0.2ms)
+                ▼
+        [ Stage 2: Dual-Tier Prompt Injection Filter ] ────────► [ Injection Detected: 403 Forbidden ]
+                │ (Clean: 0.8ms heuristic / 14ms neural)
+                ▼
+        [ Stage 3: Data Loss Prevention (DLP) Scanner ] ───────► [ Secrets / PII Found: 403 Blocked ]
+                │ (Clean: 3ms)
+                ▼
+        [ Stage 4: Declarative Policy & RBAC Check ] ──────────► [ Unauthorized Tool: 403 Denied ]
+                │ (Authorized: 1ms)
+                ▼
+        [ Stage 5: Causal Lineage & Provenance Check ] ────────► [ Tainted Memory: 403 Forbidden ]
+                │ (Untainted: 1.2ms)
+                ▼
+        [ Stage 6: Cryptographic Approval Verification ] ──────► [ Pending Human Token Queue ]
+                │ (Approved & Hash Valid: 0.8ms)
+                ▼
+        [ Tool Execution in Isolated Sandbox Broker ] ─────────► [ Return Tool Result to Agent (200 OK) ]
+        ```
         """
     )
 
     st.markdown("---")
-    st.markdown("#### 📄 Academic Paper & Citation Artifacts")
+    st.markdown("#### 📄 Project Resources & Academic Artifacts")
     st.markdown(
         """
-        - **Full Research Paper Draft:** [`papers/aegis_paper.md`](file:///d:/Internship/College%20Project/AEGIS-ai/papers/aegis_paper.md) (IEEE Double-Column Format)
-        - **BibTeX Citation Suite:** [`papers/references.bib`](file:///d:/Internship/College%20Project/AEGIS-ai/papers/references.bib) (20 Peer-Reviewed Citations)
+        - **KCC Minor Project Report (Word .docx):** [`KCC_AEGIS_Minor_Project_Report.docx`](file:///d:/Internship/College%20Project/AEGIS-ai/KCC_AEGIS_Minor_Project_Report.docx) *(Times New Roman 12pt, 1.5 spacing)*
+        - **Minor Project Report (Markdown):** [`docs/KCC_AEGIS_Minor_Project_Report.md`](file:///d:/Internship/College%20Project/AEGIS-ai/docs/KCC_AEGIS_Minor_Project_Report.md)
+        - **PowerPoint Presentation Deck (.pptx):** [`AEGIS_Idea_Presentation.pptx`](file:///d:/Internship/College%20Project/AEGIS-ai/AEGIS_Idea_Presentation.pptx)
+        - **GitHub Repository:** [https://github.com/farhanmallik05/AEGIS-ai](https://github.com/farhanmallik05/AEGIS-ai)
         """
     )
 
@@ -1213,15 +1354,15 @@ with tab_deck:
         },
         {
             "num": 4,
-            "title": "The Dual-Lattice Information Flow Control Model",
-            "speaker": "Member 3 (Formal Security)",
+            "title": "The Idea Flow: Provenance-Dominated Approval",
+            "speaker": "Member 3 (System Architecture)",
             "time": "03:00 - 03:45",
             "content": """
-            - **Confidentiality Lattice (Denning 1976):** PUBLIC < INTERNAL < CONFIDENTIAL < RESTRICTED.
-            - **Integrity Lattice (Biba 1977):** UNTRUSTED < LOW < MEDIUM < HIGH < SYSTEM.
-            - **Theorem 1 (Provenance Dominance):** Untrusted lineage mathematically nullifies human approval.
+            - **The Breakthrough Idea:** Data provenance strictly dominates human approval.
+            - **Taint Lineage Tracking:** External untrusted data permanently marks downstream execution context.
+            - **Enforcement Principle:** Even if an operator approves a socially engineered request, provenance stops execution.
             """,
-            "note": "Demonstrate theoretical grounding in classic computer science security models.",
+            "note": "Explain the intuitive idea: provenance check guarantees that tricked humans cannot cause data leaks.",
         },
         {
             "num": 5,

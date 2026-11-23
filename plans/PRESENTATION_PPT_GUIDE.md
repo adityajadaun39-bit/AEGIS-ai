@@ -78,39 +78,37 @@
 
 ---
 
-## Slide 5: System Architecture & In-Line Pipeline
+## Slide 5: The Idea Flow: Ingestion to Enforcement
 * **Target Time:** 1:30
-* **Slide Title:** **System Architecture: The Multi-Stage Inspection Pipeline**
+* **Slide Title:** **The Idea Flow: Ingestion to Enforcement**
 * **Visual Elements:**
-  * Clean reproduction of the AEGIS architecture pipeline diagram:
-    `Agent Ingress` $\rightarrow$ `Auth (HMAC)` $\rightarrow$ `ML Injection Detector` $\rightarrow$ `DLP Scanner` $\rightarrow$ `Policy Engine` $\rightarrow$ `IFC Lattice Check` $\rightarrow$ `Approval Gate (SHA-256)` $\rightarrow$ `Tool Broker Execution`.
-  * Highlight the separation between the Agentic Client, the Gateway Sandbox, and the Upstream Sinks.
+  * Two comparative panels side-by-side:
+    * **Left Panel (The Human Approval Trap):** Untrusted document ingestion $\rightarrow$ Indirect prompt injection payload hidden inside $\rightarrow$ Agent socially engineers human operator $\rightarrow$ Operator deceived into clicking "Approve" $\rightarrow$ Legacy systems blindly execute exfiltration!
+    * **Right Panel (The AEGIS Solution):** Ingress provenance metadata tagging $\rightarrow$ Session memory tainted with `UNTRUSTED` label $\rightarrow$ Gateway intercepts outbound action $\rightarrow$ Causal Lineage evaluates provenance $\rightarrow$ Gateway overrides human approval and blocks exfiltration!
 * **Key On-Slide Points:**
-  * **Zero Client Rewrites:** Works as a standard proxy for LangChain, CrewAI, AutoGen, or raw REST/OpenAI tool loops.
-  * **Multi-Stage Sequential Inspection:** Fast checks fail first (<1ms), minimizing system latency.
-  * **Audit Engine:** Generates unified `trace_id` and correlates multi-stage attacks via `attack_id`.
+  * **The Human Approval Fallacy:** Human approval is a necessary condition for privileged operations, but *never* a sufficient one.
+  * **Causal Taint Lineage:** Untrusted information permanently marks agent context; taint cannot be washed away by conversational justification.
+  * **Provenance Dominance:** Low-integrity data cannot flow into high-integrity sinks, regardless of human operator approval.
 * **Speaker Script:**
-  > *"This diagram represents the AEGIS Gateway pipeline. When an agent proposes an action, it hits our ingress proxy. First, HMAC agent credentials verify identity. Next, our on-device ML classifier scans for injection signatures. Third, a DLP engine inspects payloads for API keys or credentials. Fourth, declarative access policies are checked. Fifth, our IFC lattice verifies source lineage. Finally, if human approval is required, the payload is cryptographically hashed with SHA-256 before reaching our isolated tool broker. Every step is audited and streamed to our SOC console."*
+  > *"Here is the central idea flow of AEGIS. Consider the conventional model: an agent ingests an untrusted invoice containing a hidden injection. The agent reads it, gets hijacked, and drafts an email asking the human supervisor to approve a routine backup transfer. Fatigued or misled, the supervisor clicks approve, and enterprise data is exfiltrated. AEGIS breaks this attack chain completely. We introduce the axiom that Data Provenance Strictly Dominates Human Approval. When untrusted data enters the agent, its memory context is tainted. When the agent attempts to exfiltrate data, our gateway checks its origin lineage. Even if the supervisor clicks approve, AEGIS overrides it and terminates the request. Security is mathematically independent of human error."*
 
 ---
 
-## Slide 6: Mathematical Foundations (Formal IFC Model)
+## Slide 6: System Design & Component Architecture
 * **Target Time:** 1:30
-* **Slide Title:** **Formal Modeling: Denning Lattice & Biba Integrity for Agents**
+* **Slide Title:** **System Design: High-Availability Reverse Proxy Gateway**
 * **Visual Elements:**
-  * Two lattice diagrams side-by-side:
-    * **Sensitivity Lattice:** $\text{Public} < \text{Internal} < \text{Confidential}$ (Join / Least Upper Bound)
-    * **Integrity Lattice:** $\text{Untrusted} < \text{Reviewed} < \text{Trusted}$ (Meet / Greatest Lower Bound)
-  * Formal Rule Equations in KaTeX notation.
+  * Component architecture diagram showing:
+    `Agent Ingress` $\rightarrow$ `Ingress HMAC Auth (<1ms)` $\rightarrow$ `Dual-Tier Injection Classifier (Tier-1 Regex + Tier-2 ONNX)` $\rightarrow$ `Presidio DLP Secret Redactor` $\rightarrow$ `Causal Lineage DAG & Policy Engine` $\rightarrow$ `Cryptographic SHA-256 Approval Broker` $\rightarrow$ `Isolated Sandbox Execution` $\rightarrow$ `SQLite WAL Audit Ledger`.
+  * Highlight the zero-code agent integration (drop-in HTTP proxy).
 * **Key On-Slide Points:**
-  * **Lineage Propagation:**
-    $$\text{Taint}_{\text{child}} = \bigvee \text{Taint}_{\text{parents}}$$
-  * **Confidentiality Constraint (Bell-LaPadula):**
-    $$\text{Sensitivity}(\text{Data}) \le \text{Clearance}(\text{Sink})$$
-  * **Integrity Dominance Constraint (Biba):**
-    $$\text{Trust}(\text{Source}) = \text{Untrusted} \implies \text{Allowed}(\text{Outbound}) = \text{False} \quad \forall \text{Approval}$$
+  * **Reverse Proxy Architecture:** Sits transparently in-line between Agent runtimes (LangChain, CrewAI, AutoGen) and external APIs.
+  * **Fail-Fast Pipeline:** Fast regex heuristics (<1ms) reject blatant attacks instantly, leaving ONNX neural classification only for complex payloads.
+  * **Causal Lineage DAG:** Tracks data flow provenance asynchronously across multi-step agent actions.
+  * **Cryptographic Token Binding:** SHA-256 canonical token binding prevents parameter tampering and TOCTOU exploits.
+  * **SQLite WAL Concurrency:** Write-Ahead Logging delivers 23.3 req/sec and zero database locks under 50-worker concurrency.
 * **Speaker Script:**
-  > *"To ensure academic and mathematical rigor, AEGIS does not rely on ad-hoc heuristics. We adapted the classical Denning Information Flow Lattice and Biba Integrity models for generative agents. Sensitivity forms a join-semilattice where any output derived from multiple documents inherits the highest confidentiality. Integrity forms a meet-semilattice where trust degrades to the lowest level. When an agent reads an untrusted document, its entire context is mathematically marked with untrusted integrity. By formal definition, untrusted integrity cannot flow into an external broadcast sink. The gateway enforces this mathematically."*
+  > *"To implement this idea in production without slowing down agents, we engineered an in-line reverse proxy architecture. It requires zero agent code refactoring—agents simply point their HTTP proxy or tool calls to AEGIS. The gateway processes requests through a sequential, fail-fast pipeline: HMAC agent identity verification, dual-tier prompt injection detection (sub-millisecond regex plus local ONNX transformer inference), Presidio DLP secret scrubbing, causal lineage tracking, and cryptographic SHA-256 approval binding. All audit traces are written to SQLite in Write-Ahead Logging mode, guaranteeing zero lock contention even under heavy concurrent multi-agent traffic."*
 
 ---
 
@@ -154,7 +152,7 @@
   * Clean 5-column or 5-card layout detailing each member's contributions:
     * **Farhan (Lead):** Core Proxy, Routing, Cryptographic Binding, Schemas.
     * **Member 2:** ML Injection Detector, DLP Scanner, Unit Tests.
-    * **Member 3:** IFC Lattice, OPA Engine, Provenance DB, YAML Policies.
+    * **Member 3:** Causal Lineage DAG, Provenance Policy Engine, YAML Rules.
     * **Member 4:** Streamlit SOC Console, Plotly DAGs, SSE Stream, Demo Tab.
     * **Member 5:** Docker Compose, GitHub Actions CI/CD, 50-Worker Load Test.
 * **Speaker Script:**

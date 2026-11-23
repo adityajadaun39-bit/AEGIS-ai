@@ -446,70 +446,76 @@
     </div>
 
     <!-- SLIDE 4 -->
-    <div class="slide" data-speaker="Member 3 (Formal Security)" data-time="03:00 - 04:00">
+    <div class="slide" data-speaker="Member 3 (System Architecture)" data-time="03:00 - 04:00">
       <div class="slide-header">
         <div>
-          <div class="slide-tag">MATHEMATICAL FOUNDATION</div>
-          <h1 class="slide-title">The Dual-Lattice Information Flow Control Model</h1>
+          <div class="slide-tag">IDEA FLOW &amp; CORE CONCEPT</div>
+          <h1 class="slide-title">The Idea Flow: Data Provenance Dominates Approval</h1>
         </div>
-        <div class="speaker-badge">Member 3 (Security)<br><span style="font-size:0.65rem;">03:00 - 04:00</span></div>
+        <div class="speaker-badge">Member 3 (Architecture)<br><span style="font-size:0.65rem;">03:00 - 04:00</span></div>
       </div>
       <div class="slide-body">
         <div class="grid-2">
-          <div class="card">
-            <h3>1. Confidentiality Lattice (Denning 1976)</h3>
-            <div style="font-family: var(--font-mono); font-size: 0.85rem; color: #38bdf8; margin: 0.75rem 0;">
-              PUBLIC &sqsubset; INTERNAL &sqsubset; CONFIDENTIAL &sqsubset; RESTRICTED
+          <div class="card" style="border-color: rgba(244,63,94,0.3); background: rgba(244,63,94,0.04);">
+            <h3 style="color:#fb7185;">1. Traditional Approach: The Approval Trap</h3>
+            <div style="font-size: 0.9rem; line-height: 1.6; margin-top: 0.75rem;">
+              &bull; Human is treated as the unconditional root of trust.<br>
+              &bull; Attacker embeds prompt injection in external data (PDF/Web).<br>
+              &bull; Agent crafts polite, convincing rationale: <em>"Routine system sync"</em>.<br>
+              &bull; Human clicks <strong>[APPROVE]</strong> &rarr; Secrets exfiltrated!
             </div>
-            <p style="font-size: 0.9rem;">
-              Flow allowed iff: <code>L_src &sqsubseteq; L_dst</code><br>
-              Joins via Least Upper Bound (LUB): <code>max(A, B)</code>
-            </p>
           </div>
-          <div class="card">
-            <h3>2. Integrity Lattice (Biba 1977)</h3>
-            <div style="font-family: var(--font-mono); font-size: 0.85rem; color: #fb7185; margin: 0.75rem 0;">
-              UNTRUSTED &sqsubset; LOW &sqsubset; MEDIUM &sqsubset; HIGH &sqsubset; SYSTEM
+          <div class="card" style="border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.04);">
+            <h3 style="color:#34d399;">2. The AEGIS Idea: Provenance-First</h3>
+            <div style="font-size: 0.9rem; line-height: 1.6; margin-top: 0.75rem;">
+              &bull; When untrusted data enters, memory context is marked <strong>TAINTED</strong>.<br>
+              &bull; Every downstream action inherits the causal source taint.<br>
+              &bull; Even if human manager clicks [APPROVE], gateway inspects lineage.<br>
+              &bull; <strong>Result:</strong> Gateway overrides approval and <strong>BLOCKS</strong> exfiltration!
             </div>
-            <p style="font-size: 0.9rem;">
-              Biba Contamination: <code>integrity(A &cup; B) = min(A, B)</code><br>
-              Untrusted inputs irrevocably contaminate memory.
-            </p>
           </div>
         </div>
       </div>
       <div class="slide-footer">
-        <span class="note-text"><strong>PRESENTER CUE:</strong> Show mathematical rigor. Explain that Denning and Biba lattices guarantee non-interference.</span>
-        <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-cyan);">&forall; a &isin; Actions</span>
+        <span class="note-text"><strong>PRESENTER CUE:</strong> Deliver the core thesis clearly: "Human approval is a necessary condition, but never a sufficient one."</span>
+        <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-cyan);">Provenance &gt; Human</span>
       </div>
     </div>
 
     <!-- SLIDE 5 -->
-    <div class="slide" data-speaker="Member 3 (Formal Security)" data-time="04:00 - 05:00">
+    <div class="slide" data-speaker="Member 3 (System Architecture)" data-time="04:00 - 05:00">
       <div class="slide-header">
         <div>
-          <div class="slide-tag">CORE THEORETICAL CONTRIBUTION</div>
-          <h1 class="slide-title">Theorem 1: Provenance Dominates Human Approval</h1>
+          <div class="slide-tag">SYSTEM DESIGN ARCHITECTURE</div>
+          <h1 class="slide-title">Multi-Layer Gateway Component Architecture</h1>
         </div>
-        <div class="speaker-badge">Member 3 (Security)<br><span style="font-size:0.65rem;">04:00 - 05:00</span></div>
+        <div class="speaker-badge">Member 3 (Architecture)<br><span style="font-size:0.65rem;">04:00 - 05:00</span></div>
       </div>
       <div class="slide-body">
-        <div class="card" style="background: rgba(0,212,255,0.04); border-color: rgba(0,212,255,0.3); margin-bottom: 1.5rem;">
-          <h3 style="color:#00d4ff;">Formal Invariant Formulation</h3>
-          <div style="font-family: var(--font-mono); font-size: 1.1rem; color: #ffffff; padding: 1rem; background: rgba(0,0,0,0.5); border-radius: 8px;">
-            &forall; a &isin; Actions, permit(a) &hArr; (C(a) &sqsubseteq; C(sink)) &and; ( &bigsqcap; integrity(v) &ge; I_req(a) )
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="color:#00d4ff;">Ingress &amp; Multi-Tier Inspection</h3>
+            <div style="font-size: 0.9rem; line-height: 1.6; margin-top: 0.5rem;">
+              &bull; <strong>HMAC Ingress:</strong> Validates agent identity &amp; rate limits in &lt;0.2ms.<br>
+              &bull; <strong>Tier-1 Heuristics:</strong> Regex filters known injection primitives (&lt;1ms).<br>
+              &bull; <strong>Tier-2 Neural Filter:</strong> ONNX quantized transformer classifier (&lt;15ms).<br>
+              &bull; <strong>DLP Scanner:</strong> Presidio redacts AWS keys, private keys &amp; PII.
+            </div>
           </div>
-          <p style="font-size: 0.95rem; margin-top: 1rem; color: #e2e8f0;">
-            <strong>Corollary:</strong> No human approval token &tau;_HITL can authorize action <em>a</em> if any node in the causal lineage graph has <code>integrity = UNTRUSTED</code>.
-          </p>
+          <div class="card">
+            <h3 style="color:#38bdf8;">Broker &amp; High-Concurrency Persistence</h3>
+            <div style="font-size: 0.9rem; line-height: 1.6; margin-top: 0.5rem;">
+              &bull; <strong>Lineage Tracker:</strong> Dynamic graph tracking memory taint across calls.<br>
+              &bull; <strong>SHA-256 Token Binding:</strong> Locks payload parameters to prevent TOCTOU tampering.<br>
+              &bull; <strong>Isolated Sandbox Broker:</strong> Controlled execution of SQL, Mail &amp; APIs.<br>
+              &bull; <strong>SQLite WAL Mode:</strong> 50 concurrent workers with 0 lock contention.
+            </div>
+          </div>
         </div>
-        <p style="font-size: 0.95rem; color: var(--text-muted);">
-          In AEGIS, data provenance strictly supersedes human authorization. When an attacker deceives an operator, the mathematical boundary fails closed and aborts the tool execution.
-        </p>
       </div>
       <div class="slide-footer">
-        <span class="note-text"><strong>PRESENTER CUE:</strong> High-impact moment. State: "Even if an attacker tricks the CEO into clicking Approve, AEGIS blocks the flow."</span>
-        <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-emerald);">Theorem 1 Proven</span>
+        <span class="note-text"><strong>PRESENTER CUE:</strong> Emphasize modularity and fail-fast performance: 90% of malicious calls exit in &lt;1ms.</span>
+        <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-emerald);">System Pipeline</span>
       </div>
     </div>
 

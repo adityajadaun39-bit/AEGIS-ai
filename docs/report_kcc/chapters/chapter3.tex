@@ -8,7 +8,7 @@ AEGIS operates as an in-line reverse proxy intercepting all tool invocations pro
 \fbox{
 \begin{minipage}{0.9\textwidth}
 \small
-\texttt{Agent Request} $\to$ \textbf{[Stage 1: HMAC Auth]} $\to$ \textbf{[Stage 2: Dual-Tier ML]} $\to$ \textbf{[Stage 3: DLP]} $\to$ \textbf{[Stage 4: OPA Policy]} $\to$ \textbf{[Stage 5: Dual-Lattice IFC]} $\to$ \textbf{[Stage 6: Crypto Broker]} $\to$ \texttt{Sandbox Execution}
+\texttt{Agent Request} $\to$ \textbf{[Stage 1: HMAC Auth]} $\to$ \textbf{[Stage 2: Dual-Tier ML]} $\to$ \textbf{[Stage 3: DLP]} $\to$ \textbf{[Stage 4: OPA Policy]} $\to$ \textbf{[Stage 5: Causal Lineage Tracker]} $\to$ \textbf{[Stage 6: Crypto Broker]} $\to$ \texttt{Sandbox Execution}
 \end{minipage}
 }
 \caption{High-Level AEGIS Gateway Architecture \& In-Line Inspection Pipeline}
@@ -21,75 +21,70 @@ The pipeline executes sequentially:
     \item \textbf{Stage 2 (ML Injection Classifier):} Tier-1 regex heuristics ($<1$~ms) filter known signatures, falling back to Tier-2 ONNX models for borderline inputs.
     \item \textbf{Stage 3 (DLP Scanner):} Regex and Presidio scanners detect sensitive credentials and PII.
     \item \textbf{Stage 4 (OPA Policy):} Evaluates declarative RBAC authorization.
-    \item \textbf{Stage 5 (Dual-Lattice IFC):} Verifies session taint and enforces Theorem 1.
+    \item \textbf{Stage 5 (Causal Lineage Tracker):} Verifies session taint and enforces the Provenance Dominance Invariant.
     \item \textbf{Stage 6 (Approval Broker):} Validates cryptographic tokens and dispatches execution inside an isolated sandbox.
 \end{enumerate}
 
-\section{Mathematical Methodology: Dual-Lattice IFC Model}
-The formal security state is modeled as the Cartesian product lattice:
-\begin{equation}
-\mathcal{L}_{IFC} = \langle \mathcal{C}, \sqsubseteq_C, \sqcup_C \rangle \times \langle \mathcal{I}, \sqsubseteq_I, \sqcap_I \rangle
-\end{equation}
+\section{Idea Flow \& Conceptual Taint Lineage Architecture}
+The foundational thesis of AEGIS resolves the human approval social-engineering trap through causal taint lineage tracking. In conventional Human-in-the-Loop (HITL) frameworks, autonomous agents ingest external untrusted documents (such as PDF resumes, invoices, and support tickets). An attacker embeds an indirect prompt injection within these documents. When the agent processes the file, untrusted data and system instructions intermingle in the attention context, turning the agent into a confused deputy. The hijacked agent crafts a privileged outbound action accompanied by a polite justification (e.g., ``Routine database sync requested by IT''). Deceived by this rationale, a human supervisor approves the request, leading to data exfiltration.
+
+AEGIS eliminates this vulnerability through the \textbf{Provenance Dominance Axiom}:
+\begin{quote}
+\textit{Data Provenance Strictly Dominates Human Approval. Human authorization is a necessary condition for privileged operations, but never a sufficient one.}
+\end{quote}
+
+When untrusted data enters the agent boundary, its session context is permanently labeled as \texttt{UNTRUSTED}. The gateway intercepts outbound tool calls and evaluates their origin lineage. If the lineage DAG contains untrusted data, the gateway enforces the Provenance Dominance Invariant and terminates the request (\texttt{HTTP 403 Forbidden}), overriding any human approval token.
 
 \begin{table}[htbp]
 \centering
-\caption{Denning Confidentiality Lattice Levels and Flow Rules}
-\label{tab:conf_lattice}
-\begin{tabular}{c l p{5.5cm} p{4.5cm}}
+\caption{Taint Lineage Provenance Levels and Sensitivity Classifications}
+\label{tab:lineage_class}
+\begin{tabular}{l l p{5.0cm} p{4.5cm}}
 \toprule
-\textbf{Level} & \textbf{Identifier} & \textbf{Semantics} & \textbf{Allowable Flows ($\sqsubseteq_C$)} \\
+\textbf{Dimension} & \textbf{Level} & \textbf{Semantics \& Scope} & \textbf{Enforcement Action} \\
 \midrule
-$c_0$ & \texttt{PUBLIC} & Openly accessible data & Flows to all levels ($c_0, c_1, c_2, c_3$) \\
-$c_1$ & \texttt{INTERNAL} & Internal enterprise documentation & Flows to $c_1, c_2, c_3$; Cannot flow to $c_0$ \\
-$c_2$ & \texttt{CONFIDENTIAL} & Customer PII, financial records & Flows to $c_2, c_3$; Cannot flow to $c_0, c_1$ \\
-$c_3$ & \texttt{RESTRICTED} & Root keys, cryptographic secrets & Flows strictly to $c_3$ \\
+Provenance Integrity & \texttt{UNTRUSTED} & External web pages, PDFs, emails & Outbound flow permanently barred \\
+Provenance Integrity & \texttt{EVALUATED} & Sanitized external data & Read-only internal tools only \\
+Provenance Integrity & \texttt{TRUSTED} & Internal verified databases & Permitted enterprise tools \\
+Provenance Integrity & \texttt{SYSTEM} & Core gateway policies & Unrestricted execution authority \\
+\midrule
+Data Sensitivity & \texttt{PUBLIC} & Openly accessible documentation & Exportable across all endpoints \\
+Data Sensitivity & \texttt{INTERNAL} & Internal enterprise documentation & Barred from public sinks \\
+Data Sensitivity & \texttt{CONFIDENTIAL} & Customer PII, financial records & Requires token \& zero taint \\
+Data Sensitivity & \texttt{RESTRICTED} & Root keys, cryptographic secrets & Strictly confined to enclaves \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+During execution, memory taint accumulates monotonically. Once an agent ingests an untrusted artifact, session integrity transitions irreversibly to \texttt{UNTRUSTED}. Taint cannot be washed away through natural language persuasion or human approval clicks.
+
+\section{System Design Architecture \& Subsystem Interactions}
+AEGIS is engineered as an in-line reverse proxy that sits transparently between agent runtimes (such as LangChain, AutoGen, and CrewAI) and external execution environments. It requires zero client refactoring: agents configure the gateway as their base URL or HTTP proxy.
+
+The gateway organizes security verification into a sequential, fail-fast pipeline with strict sub-millisecond to sub-20ms latency budgets. Fast heuristic filtering and authentication reject invalid or malicious requests immediately before activating heavier neural or cryptographic stages.
+
 \begin{table}[htbp]
 \centering
-\caption{Biba Integrity Lattice Levels and Invocation Constraints}
-\label{tab:integ_lattice}
-\begin{tabular}{c l p{5.5cm} p{4.5cm}}
+\caption{Subsystem Component Matrix and Latency Budgets}
+\label{tab:subsystem_matrix}
+\begin{tabular}{l l p{5.5cm} c}
 \toprule
-\textbf{Level} & \textbf{Identifier} & \textbf{Semantics} & \textbf{Allowable Invocations ($\sqsubseteq_I$)} \\
+\textbf{Subsystem Module} & \textbf{Source File} & \textbf{Core Responsibility} & \textbf{Latency Budget} \\
 \midrule
-$i_0$ & \texttt{UNTRUSTED} & External web pages, PDFs, emails & Cannot invoke high-integrity tools \\
-$i_1$ & \texttt{EVALUATED} & Sanitized external data & May invoke standard read-only tools \\
-$i_2$ & \texttt{TRUSTED} & Internal verified databases & May invoke privileged enterprise tools \\
-$i_3$ & \texttt{SYSTEM} & Core gateway policies & Unrestricted execution authority \\
+Ingress Proxy \& Router & \texttt{app.py}, \texttt{gateway.py} & HTTP proxying \& fail-closed pipeline & $<0.5$~ms \\
+Authentication Engine & \texttt{agent\_auth.py} & HMAC-SHA256 agent identity verification & $<0.2$~ms \\
+ML Injection Detector & \texttt{ml\_detector.py} & Regex heuristics + ONNX transformer & $0.8 - 14$~ms \\
+DLP Scanning Engine & \texttt{dlp\_engine.py} & Secret, key, and PII pattern redaction & $\sim 3.0$~ms \\
+Policy Engine & \texttt{policy\_engine.py} & OPA-style YAML access control rules & $\sim 1.0$~ms \\
+Causal Lineage Tracker & \texttt{ifc\_lattice.py} & Provenance DAG \& Invariant enforcement & $\sim 1.2$~ms \\
+Approval Broker \& Store & \texttt{approval\_engine.py} & SHA-256 tokens \& SQLite WAL queue & $\sim 0.8$~ms \\
+Isolated Tool Broker & \texttt{simulated\_tools.py} & Sandboxed tool execution (SQL, Mail) & $\sim 2.0$~ms \\
+Audit Logger & \texttt{audit.py} & Asynchronous SQLite WAL structured ledger & Non-blocking \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-When the agent reads an external artifact $d$ with label $\langle C(d), I(d) \rangle$, memory state $M$ transitions via:
-\begin{align}
-C(M_{t+1}) &= C(M_t) \sqcup_C C(d) \quad \text{(Least Upper Bound Join)} \\
-I(M_{t+1}) &= I(M_t) \sqcap_I I(d) \quad \text{(Greatest Lower Bound Meet)}
-\end{align}
-Because $\sqcap_I$ is monotonic, reading untrusted data permanently degrades integrity to \texttt{UNTRUSTED}.
-
-\section{Formal Verification: Theorem 1 \& Invariant Proof}
-\begin{theorem}[Provenance Dominance Invariant]
-Let $\pi = (s_0, a_0, s_1, \dots, a_{k-1}, s_k)$ be an arbitrary execution trace. If there exists $j < k$ such that data $d_j$ has Integrity $I(d_j) = \text{UNTRUSTED}$, then for all privileged actions $a_k$ targeting sink $S$ where $I(S) \ge \text{TRUSTED}$:
-\begin{equation}
-\text{GateDecision}(a_k, \pi, \text{HumanApproval} = \text{TRUE}) \equiv \text{DENY}
-\end{equation}
-\end{theorem}
-
-\begin{proof}
-We prove by mathematical induction on trace length $k$.
-\begin{itemize}
-    \item \textbf{Base Case ($k=1$):} At $s_0$, $I(s_0) = \text{TRUSTED}$. Reading untrusted artifact $d_0$ yields $I(s_1) = \text{TRUSTED} \sqcap_I \text{UNTRUSTED} = \text{UNTRUSTED}$. The invocation condition requires $I(s_1) \ge_I I(S) = \text{TRUSTED}$, which evaluates to FALSE. The gateway denies execution.
-    \item \textbf{Inductive Step ($m \to m+1$):} Assume $I(s_m) = \text{UNTRUSTED}$. Any subsequent read $d_{m+1}$ yields $I(s_{m+1}) = \text{UNTRUSTED} \sqcap_I I(d_{m+1}) = \text{UNTRUSTED}$, as $\text{UNTRUSTED}$ is the bottom element ($\bot_I$). Local computation preserves integrity. Evaluating the gateway decision:
-    \begin{equation}
-    \text{GateDecision}(a, \pi, H) = \text{Gate}_{IFC}(\pi) \land (\text{RequiresApproval}(a) \implies H)
-    \end{equation}
-    Since $\text{Gate}_{IFC}(\pi) \equiv \text{FALSE}$, $\text{FALSE} \land \text{TRUE} = \text{FALSE} \equiv \text{DENY}$.
-\end{itemize}
-Thus, social engineering human approvers yields exactly zero bypass probability ($P(\text{Bypass}) = 0$).
-\end{proof}
+The subsystem interaction guarantees fail-closed behavior: any parser error, internal exception, or security invariant violation immediately yields an HTTP 403 Forbidden, protecting downstream assets.
 
 \section{Data Flow, Sequence and State Modeling}
 Level 0 and Level 1 DFDs illustrate system boundary interactions and sub-stage data flow. UML sequence diagrams verify the 10-step cryptographic token binding handshake. The state transition model captures irreversible memory taint from \texttt{CLEAN} to \texttt{TAINTED}.

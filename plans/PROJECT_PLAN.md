@@ -5,7 +5,7 @@
 > **Target Milestone:** Major College Capstone Project (5 Members) & Open-Source B2B Foundation  
 > **Academic Session:** 2026–2027  
 
----
+--- 
 
 ## 1. Project Overview & Problem Formulation
 

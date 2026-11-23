@@ -124,7 +124,7 @@ docker-compose up --build
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
-
++
 # 2. Run the unit and integration test suite
 $env:PYTHONPATH="."  # On Linux/macOS: export PYTHONPATH="."
 pytest tests/ -v
