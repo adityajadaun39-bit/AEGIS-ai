@@ -156,7 +156,7 @@
     * **Member 4:** Streamlit SOC Console, Plotly DAGs, SSE Stream, Demo Tab.
     * **Member 5:** Docker Compose, GitHub Actions CI/CD, 50-Worker Load Test.
 * **Speaker Script:**
-  > *"To ensure every team member contributed substantial, independent engineering work, we modularized AEGIS across five clear tracks. Farhan designed the core gateway, authentication, and cryptographic hashing. Member Two developed the ML injection and DLP engines. Member Three formalized the IFC lattice and policy rules. Member Four built our real-time SOC console and interactive attack visualizer. Member Five led containerization, continuous integration, and empirical load testing. Each member authored independent test suites and distinct thesis chapters."*
+  > *"To ensure every team member contributed substantial, independent engineering work, we modularized AEGIS across five clear tracks. Farhan designed the core gateway, authentication, and cryptographic hashing. Member Two developed the ML injection and DLP engines. Member Three designed the Causal Lineage DAG and provenance policy rules. Member Four built our real-time SOC console and interactive attack visualizer. Member Five led containerization, continuous integration, and empirical load testing. Each member authored independent test suites and distinct thesis chapters."*
 
 ---
 
@@ -167,7 +167,7 @@
   * Live screen capture / live browser showing the Streamlit SOC Console:
     * Stage 1: Authorized Read (Green ALLOW card)
     * Stage 2: Indirect Prompt Injection Detected (Amber risk score 0.97)
-    * Stage 3: Compromised Human Approval Blocked by IFC (Red DENY card)
+    * Stage 3: Compromised Human Approval Blocked by Provenance Dominance (Red DENY card)
     * Stage 4: Payload Tampering Hash Mismatch Blocked (Red DENY card)
 * **Live Demo Narration Script:**
   > *"Now, we will demonstrate AEGIS live using our SOC console.  

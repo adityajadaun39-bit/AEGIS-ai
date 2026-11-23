@@ -17,7 +17,7 @@ Autonomous AI agents powered by Large Language Models (LLMs) are routinely grant
 
 ### 1.2 The AEGIS Solution
 AEGIS is an **in-line, transparent security gateway** that intercepts all agent tool requests before broker execution:
-* **Mathematical Provenance Tracking:** Enforces the Denning/Biba Information Flow Control (IFC) security lattice.
+* **Causal Lineage Tracking:** Enforces causal taint propagation and the Provenance Dominance Invariant.
 * **Non-Bypassable Rule 2 (Core Differentiator):** **Data provenance strictly dominates human approval.** If data originates from an untrusted or confidential source, outbound transfer is denied *even if a human clicked "APPROVE"*.
 * **Cryptographic Tamper-Proofing:** Approvals are cryptographically pinned to the canonical SHA-256 hash of the complete request payload.
 * **Multi-Tier Detection:** On-device ML prompt injection classification (<15ms) paired with regex DLP secret scanning.
@@ -31,7 +31,7 @@ graph TD
     subgraph WBS["AEGIS 5-Member Team Organization"]
         M1["Member 1: Team Lead\nGateway Architecture & Proxy Core"]
         M2["Member 2: AI Security\nML Injection & DLP Engines"]
-        M3["Member 3: Formal Policy\nProvenance Graph & IFC Lattice"]
+        M3["Member 3: Security & Policy\nProvenance Graph & Lineage Engine"]
         M4["Member 4: Full-Stack\nSOC Console & Real-Time Telemetry"]
         M5["Member 5: DevOps & QA\nLoad Benchmarks, Docker & CI/CD"]
     end
@@ -59,9 +59,9 @@ graph TD
 * **Key Deliverables:** Sub-millisecond signature detection, regex patterns for AWS/OpenAI/JWT/PII keys, probabilistic injection risk scoring.
 * **Thesis Chapter:** *Chapter 4: Adversarial NLP, Machine Learning Defenses, and Data Loss Prevention.*
 
-### Member 3: Formal Policy Specialist — Provenance Graph & IFC Lattice
+### Member 3: Security Policy Specialist — Causal Lineage & Provenance Graph
 * **Assigned Modules:**
-  * `backend/security/ifc_lattice.py` (Denning/Biba lattice implementation)
+  * `backend/security/ifc_lattice.py` (Causal lineage & taint propagation implementation)
   * `backend/security/policy_engine.py` (In-process policy evaluator & OPA integration)
   * `backend/security/provenance_context.py` (SQLite persistent context and attack correlation)
   * `policies/default_policy.yaml` & `policies/agent_access.rego`
@@ -102,7 +102,7 @@ gantt
     section Phase 2: Security Engines
     ML Injection Detector (ONNX)    :done, m2_1, 2026-11-14, 5d
     DLP & Secret Scanner            :done, m2_2, 2026-11-15, 4d
-    IFC Lattice & In-Process Policy :done, m3_1, 2026-11-16, 5d
+    Causal Lineage & In-Process Policy :done, m3_1, 2026-11-16, 5d
     section Phase 3: Dashboard & SOC
     Dark-Mode SOC Console           :done, m4_1, 2026-11-17, 4d
     Plotly Lineage Graph & Live Demo:done, m4_2, 2026-11-18, 3d

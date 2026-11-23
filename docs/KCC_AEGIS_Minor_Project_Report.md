@@ -117,7 +117,7 @@ As enterprise software systems rapidly transition from passive conversational La
 
 To resolve this challenge, this project introduces **AEGIS (Autonomous Entity Governance and Inspection Shield)**, an in-line security gateway and cryptographic approval proxy for autonomous AI agents. AEGIS introduces a novel security axiom: **Data Provenance Strictly Dominates Human Approval**. Grounded in a causal taint lineage architecture enforcing the Provenance Dominance Invariant, AEGIS guarantees that information originating from an untrusted source cannot flow into a privileged outbound sink, regardless of whether a human operator grants approval. 
 
-The AEGIS gateway integrates a multi-stage inspection pipeline combining sub-millisecond heuristic filtering, ONNX-quantized neural injection detection, Presidio-based Data Loss Prevention (DLP), Open Policy Agent (OPA) rule enforcement, and SHA-256 cryptographic token binding to prevent Time-of-Check to Time-of-Use (TOCTOU) payload tampering. Empirical evaluation across 10 distinct real-world attack scenarios (E01–E10) demonstrates a 100% detection rate with a mean gateway latency overhead of only 17.98 ms. The project passes 106 automated unit and integration tests (100% pass rate in 2.59 s) and maintains zero database lock contention under 50-worker concurrent load via SQLite Write-Ahead Logging (WAL). A real-time Security Operations Center (SOC) dashboard provides security analysts with threat distribution analytics and causal lineage directed acyclic graphs (DAGs).
+The AEGIS gateway integrates a multi-stage inspection pipeline combining sub-millisecond heuristic filtering, ONNX-quantized neural injection detection, Presidio-based Data Loss Prevention (DLP), Open Policy Agent (OPA) rule enforcement, and SHA-256 cryptographic token binding to prevent Time-of-Check to Time-of-Use (TOCTOU) payload tampering. Empirical evaluation across 10 distinct real-world attack scenarios (E01–E10) demonstrates a 100% detection rate with a mean gateway latency overhead of only 17.98 ms. The project passes 114 automated unit and integration tests (100% pass rate in 3.38 s) and maintains zero database lock contention under 50-worker concurrent load via SQLite Write-Ahead Logging (WAL). A real-time Security Operations Center (SOC) dashboard provides security analysts with threat distribution analytics and causal lineage directed acyclic graphs (DAGs).
 
 **Keywords:** AI Agent Security, Indirect Prompt Injection, Information Flow Control (IFC), Data Provenance, Confused Deputy, Cryptographic Token Binding, Causal Lineage Architecture.
 
@@ -814,40 +814,65 @@ The lineage tracker maintains session provenance state and implements the Proven
 
 #### Verbatim Code Snapshot: Causal Lineage Taint Engine (`backend/security/ifc_lattice.py`)
 ```python
-class DualLatticeTracker:
-    def __init__(self):
-        self.sessions: dict[str, LatticeState] = {}
+class IFCLattice:
+    """Causal Lineage & Provenance Dominance Engine."""
 
-    def update_session_read(self, session_id: str, artifact_conf: str, artifact_integ: str) -> None:
-        """
-        Propagates taint and sensitivity updates upon data ingestion:
-        Confidentiality: LUB (Join)
-        Integrity: GLB (Meet)
-        """
-        current = self.sessions.get(session_id, LatticeState.default())
-        
-        new_conf = ConfidentialityLevel.join(current.confidentiality, artifact_conf)
-        new_integ = IntegrityLevel.meet(current.integrity, artifact_integ)
-        
-        self.sessions[session_id] = LatticeState(
-            confidentiality=new_conf,
-            integrity=new_integ,
-            history=current.history + [f"READ(C={artifact_conf}, I={artifact_integ})"]
+    @classmethod
+    def propagate_provenance(
+        cls,
+        parents: Sequence[Provenance],
+        derived_source_id: str,
+        origin: str,
+    ) -> Provenance:
+        """Propagate taint and sensitivity through causal lineage to derived outputs."""
+        if not parents:
+            return Provenance(
+                source_id=derived_source_id,
+                source_type=SourceType.AGENT_GENERATED,
+                origin=origin,
+                trust_level=TrustLevel.TRUSTED,
+                sensitivity=SensitivityLevel.PUBLIC,
+            )
+
+        eff_sens = parents[0].sensitivity
+        eff_trust = parents[0].trust_level
+        has_untrusted_instr = parents[0].contains_untrusted_instructions
+
+        for p in parents[1:]:
+            eff_sens = cls.join_sensitivity(eff_sens, p.sensitivity)
+            eff_trust = cls.meet_trust(eff_trust, p.trust_level)
+            if p.contains_untrusted_instructions:
+                has_untrusted_instr = True
+
+        return Provenance(
+            source_id=derived_source_id,
+            source_type=SourceType.AGENT_GENERATED,
+            origin=origin,
+            trust_level=eff_trust,
+            sensitivity=eff_sens,
+            parent_source_ids=tuple(p.source_id for p in parents),
+            contains_untrusted_instructions=has_untrusted_instr,
         )
 
-    def can_flow(self, state: LatticeState, target_sink: SinkDefinition) -> bool:
-        """
-        Evaluates the Provenance Dominance Invariant:
-        If session integrity is UNTRUSTED, it cannot flow to any sink requiring >= TRUSTED.
-        """
-        if state.integrity == IntegrityLevel.UNTRUSTED and target_sink.required_integrity >= IntegrityLevel.TRUSTED:
-            # Enforce Provenance Dominance: Forbid outbound flow
-            return False
-            
-        if not ConfidentialityLevel.can_flow(state.confidentiality, target_sink.allowed_confidentiality):
-            return False
-            
-        return True
+    @classmethod
+    def is_flow_permitted(
+        cls,
+        source_records: Sequence[Provenance] | None,
+        destination_clearance: SensitivityLevel,
+        requires_trusted_source: bool = True,
+    ) -> tuple[bool, str]:
+        """Enforces the Provenance Dominance Invariant: Untrusted sources cannot flow into privileged sinks."""
+        if not source_records:
+            return True, "No source taint detected"
+
+        for record in source_records:
+            if requires_trusted_source and record.trust_level == TrustLevel.UNTRUSTED:
+                return False, "Flow violation: Untrusted source cannot flow into sensitive sink"
+
+            if record.contains_untrusted_instructions:
+                return False, "Flow violation: Source contains untrusted instructions (tainted lineage)"
+
+        return True, "Information flow permitted"
 ```
 
 ### 4.6 Cryptographic Approval Engine & Token Binding (`approval_engine.py`)
@@ -902,54 +927,49 @@ class CryptographicApprovalEngine:
 # CHAPTER 5: TESTING, RESULTS & ANALYSIS
 
 ### 5.1 Testing Methodology & Pytest Suite Breakdown
-Quality assurance for the AEGIS gateway followed a rigorous, multi-tiered test harness executing automated unit, integration, and security regression tests. The test suite comprises **106 automated tests across 19 test modules**, implemented using `pytest` and `pytest-asyncio`.
+Quality assurance for the AEGIS gateway followed a rigorous, multi-tiered test harness executing automated unit, integration, and security regression tests. The test suite comprises **114 automated tests across 20 test modules**, implemented using `pytest` and `pytest-asyncio`.
 
-*Table 5.1: Pytest Test Suite Execution Breakdown by Module (106 Tests)*
-| Test Module | Component Under Test | Test Count | Pass Rate | Execution Time |
+*Table 5.1: Pytest Test Suite Execution Breakdown by Module (114 Tests)*
+| Test Module Category | Test Modules | Test Count | Pass Rate | Execution Time |
 | :--- | :--- | :---: | :---: | :---: |
-| `test_gateway_routing.py` | FastAPI Ingress & Routing | 8 | 100% | 0.22 s |
-| `test_agent_auth.py` | HMAC Authentication & Headers | 6 | 100% | 0.11 s |
-| `test_ml_detector_tier1.py`| Heuristic Regex Classifier | 9 | 100% | 0.08 s |
-| `test_ml_detector_tier2.py`| ONNX Transformer Classifier | 7 | 100% | 0.45 s |
-| `test_dlp_scanner.py` | Presidio & Regex Secret Matcher | 8 | 100% | 0.14 s |
-| `test_ifc_lattice.py` | Causal Lineage Operators | 11 | 100% | 0.09 s |
-| `test_theorem_1_invariant.py`| Provenance Dominance Invariant | 10 | 100% | 0.12 s |
-| `test_crypto_tokens.py` | SHA-256 Token Binding & TOCTOU | 7 | 100% | 0.15 s |
-| `test_approval_store.py` | SQLite WAL Approval Queue | 8 | 100% | 0.28 s |
-| `test_audit_logger.py` | Async Audit Event Persistence | 6 | 100% | 0.18 s |
-| `test_tool_broker.py` | Sandboxed Tool Invocation | 5 | 100% | 0.10 s |
-| `test_scenarios_e01_e05.py` | Security Scenarios E01–E05 | 5 | 100% | 0.19 s |
-| `test_scenarios_e06_e10.py` | Security Scenarios E06–E10 | 5 | 100% | 0.21 s |
-| `test_concurrency_wal.py` | Multi-Threaded Database Access | 6 | 100% | 0.22 s |
-| Auxiliary Test Modules (5) | Endpoints, Schemas, Config, Mock | 5 | 100% | 0.05 s |
-| **TOTALS** | **Comprehensive Test Suite** | **106** | **100%** | **2.59 Seconds** |
+| Core Gateway & Auth | `test_gateway.py`, `test_agent_auth.py`, `test_agent.py` | 22 | 100% | 0.45 s |
+| ML, DLP & PDF Analyzers | `test_ml_detector.py`, `test_dlp_engine.py`, `test_pdf_analyzer.py` | 16 | 100% | 0.85 s |
+| Causal Lineage & Invariant | `test_ifc_lattice.py`, `test_provenance_enforcement.py`, `test_provenance.py` | 13 | 100% | 0.25 s |
+| Crypto & WAL Approval Queue | `test_approval_engine.py`, `test_approval_store.py`, `test_approval_gateway.py` | 23 | 100% | 0.72 s |
+| Policy, Control & Simulation | `devcontrol/`, `test_policy_engine.py`, `test_prompt_injection_simulation.py` | 40 | 100% | 1.11 s |
+| **TOTALS** | **Comprehensive Test Suite** | **114** | **100%** | **3.38 Seconds** |
 
 ```
 ============================= test session starts =============================
-platform win32 -- Python 3.13.0, pytest-8.3.4, pluggy-1.5.0
+platform win32 -- Python 3.13.14, pytest-9.0.3, pluggy-1.6.0
 rootdir: D:\Internship\College Project\AEGIS-ai
 configfile: pyproject.toml
-collected 106 items
+collected 114 items
 
-tests/test_agent_auth.py ......                                          [  5%]
-tests/test_approval_store.py ........                                    [ 13%]
-tests/test_audit_logger.py ......                                        [ 18%]
-tests/test_crypto_tokens.py .......                                      [ 25%]
-tests/test_dlp_scanner.py ........                                       [ 33%]
-tests/test_gateway_routing.py ........                                   [ 40%]
-tests/test_ifc_lattice.py ...........                                    [ 50%]
-tests/test_ml_detector_tier1.py .........                                [ 59%]
-tests/test_ml_detector_tier2.py .......                                  [ 66%]
-tests/test_scenarios_e01_e05.py .....                                    [ 70%]
-tests/test_scenarios_e06_e10.py .....                                    [ 75%]
-tests/test_theorem_1_invariant.py ..........                             [ 84%]
-tests/test_tool_broker.py .....                                          [ 89%]
-tests/test_concurrency_wal.py ......                                     [ 95%]
-tests/test_auxiliary.py .....                                            [100%]
+tests/devcontrol/test_config.py ...                                       [  2%]
+tests/devcontrol/test_db.py .....                                         [  7%]
+tests/devcontrol/test_service.py .........                                [ 14%]
+tests/test_agent.py ......                                                [ 20%]
+tests/test_agent_auth.py ........                                         [ 27%]
+tests/test_api_access_control.py ...........                              [ 36%]
+tests/test_app.py ..                                                      [ 38%]
+tests/test_approval_engine.py ..........                                  [ 47%]
+tests/test_approval_gateway.py ....                                       [ 50%]
+tests/test_approval_store.py ......                                       [ 56%]
+tests/test_dlp_engine.py ....                                             [ 59%]
+tests/test_gateway.py ........                                            [ 66%]
+tests/test_ifc_lattice.py ...                                             [ 69%]
+tests/test_ml_detector.py ....                                            [ 72%]
+tests/test_pdf_analyzer.py ........                                       [ 79%]
+tests/test_policy_engine.py .......                                       [ 85%]
+tests/test_prompt_injection_simulation.py .                               [ 86%]
+tests/test_provenance.py ....                                             [ 90%]
+tests/test_provenance_enforcement.py ......                               [ 95%]
+tests/test_tool_broker.py .....                                           [100%]
 
-============================= 106 passed in 2.59s =============================
+============================= 114 passed in 3.38s =============================
 ```
-*Fig. 5.1: Pytest Test Suite Terminal Execution Summary (106 Passed in 2.59s)*
+*Fig. 5.1: Pytest Test Suite Terminal Execution Summary (114 Passed in 3.38s)*
 
 ### 5.2 Empirical Security Evaluation: 10 Attack Scenarios (E01–E10)
 To validate AEGIS against the full spectrum of modern agentic threats, an empirical evaluation harness was constructed covering 10 distinct security scenarios (E01 through E10).

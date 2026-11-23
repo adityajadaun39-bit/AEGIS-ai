@@ -2,7 +2,7 @@
 
 Extracts text, metadata, and hidden layers from PDF documents, applies
 dual-tier prompt injection detection, DLP scanning, and dynamic provenance
-labeling under the Dual-Lattice Information Flow Control (IFC) model.
+labeling under the Causal Lineage & Provenance Dominance Architecture.
 """
 
 from __future__ import annotations
@@ -208,7 +208,7 @@ def evaluate_pdf_security(extraction: PDFExtractionResult) -> PDFSecurityEvaluat
         verdict = "CLEAN"
         risk_level = "LOW"
 
-    # 4. Derive Formal Dual-Lattice Provenance State
+    # 4. Derive Causal Lineage Provenance State
     trust_level = (
         TrustLevel.UNTRUSTED
         if (is_injection or extraction["has_hidden_elements"])
@@ -230,14 +230,14 @@ def evaluate_pdf_security(extraction: PDFExtractionResult) -> PDFSecurityEvaluat
     # 5. Formulate Governance Decision
     if trust_level == TrustLevel.UNTRUSTED:
         governance = (
-            "THEOREM 1 ACTIVE: Document contains untrusted/adversarial provenance. "
+            "PROVENANCE DOMINANCE ACTIVE (THEOREM 1 ACTIVE): Document contains untrusted/adversarial provenance. "
             "Downstream actions targeting privileged sinks (e.g., outbound email, external database sync) "
-            "are mathematically FORBIDDEN, even if human approval is granted."
+            "are FORBIDDEN under the Provenance Dominance Invariant, even if human approval is granted."
         )
     elif sensitivity == SensitivityLevel.CONFIDENTIAL:
         governance = (
-            "CONFIDENTIALITY LATTICE ACTIVE: Document contains sensitive credentials or PII. "
-            "Flow to PUBLIC sinks is prohibited under Denning's lattice rules."
+            "CONFIDENTIALITY CONSTRAINT ACTIVE: Document contains sensitive credentials or PII. "
+            "Flow to PUBLIC sinks is prohibited under causal taint rules."
         )
     else:
         governance = (

@@ -246,7 +246,7 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
     add_p("ABSTRACT / SYNOPSIS", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, font_size=16, space_before=12, space_after=18)
     add_p("As enterprise software systems rapidly transition from passive conversational Large Language Models (LLMs) to autonomous agentic architectures capable of invoking external tools, querying databases, and transmitting emails, they introduce a critical vulnerability: Indirect Prompt Injection (OWASP LLM01). Because Transformer-based architectures process trusted system instructions and untrusted third-party inputs within an undifferentiated token context, malicious instructions embedded in external data can hijack agent execution, rendering the agent a \"Confused Deputy\" (OWASP LLM06). Existing defenses—including system-prompt guardrails and human-in-the-loop (HITL) approval gates—consistently fail because natural language guardrails are bypassable and human approvers are susceptible to social engineering when presented with benign-looking rationales crafted by compromised agents.")
     add_p("To resolve this challenge, this project introduces AEGIS (Autonomous Entity Governance and Inspection Shield), an in-line security gateway and cryptographic approval proxy for autonomous AI agents. AEGIS introduces a novel security axiom: Data Provenance Strictly Dominates Human Approval. Grounded in a causal taint lineage architecture enforcing the Provenance Dominance Invariant, AEGIS guarantees that information originating from an untrusted source cannot flow into a privileged outbound sink, regardless of whether a human operator grants approval.")
-    add_p("The AEGIS gateway integrates a multi-stage inspection pipeline combining sub-millisecond heuristic filtering, ONNX-quantized neural injection detection, Presidio-based Data Loss Prevention (DLP), Open Policy Agent (OPA) rule enforcement, and SHA-256 cryptographic token binding to prevent Time-of-Check to Time-of-Use (TOCTOU) payload tampering. Empirical evaluation across 10 distinct real-world attack scenarios (E01–E10) demonstrates a 100% detection rate with a mean gateway latency overhead of only 17.98 ms. The project passes 106 automated unit and integration tests (100% pass rate in 2.59 s) and maintains zero database lock contention under 50-worker concurrent load via SQLite Write-Ahead Logging (WAL). A real-time Security Operations Center (SOC) dashboard provides security analysts with threat distribution analytics and causal lineage directed acyclic graphs (DAGs).")
+    add_p("The AEGIS gateway integrates a multi-stage inspection pipeline combining sub-millisecond heuristic filtering, ONNX-quantized neural injection detection, Presidio-based Data Loss Prevention (DLP), Open Policy Agent (OPA) rule enforcement, and SHA-256 cryptographic token binding to prevent Time-of-Check to Time-of-Use (TOCTOU) payload tampering. Empirical evaluation across 10 distinct real-world attack scenarios (E01–E10) demonstrates a 100% detection rate with a mean gateway latency overhead of only 17.98 ms. The project passes 114 automated unit and integration tests (100% pass rate in 3.38 s) and maintains zero database lock contention under 50-worker concurrent load via SQLite Write-Ahead Logging (WAL). A real-time Security Operations Center (SOC) dashboard provides security analysts with threat distribution analytics and causal lineage directed acyclic graphs (DAGs).")
     add_p("Keywords: AI Agent Security, Indirect Prompt Injection, Information Flow Control (IFC), Data Provenance, Confused Deputy, Cryptographic Token Binding, Causal Lineage Architecture.", bold=True, space_before=12)
 
     # ==========================================
@@ -401,7 +401,7 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
         ["DLP Engine", "Microsoft Presidio / Regex", ">= 2.2.0", "Secret & PII Detection"],
         ["Database", "SQLite 3 (WAL Mode)", ">= 3.42.0", "High-Concurrency Audit Logger"],
         ["Frontend UI", "Streamlit", ">= 1.28.0", "SOC Console & Causal Lineage"],
-        ["Testing", "Pytest / pytest-asyncio", ">= 7.4.0", "106 Automated Unit Tests"]
+        ["Testing", "Pytest / pytest-asyncio", ">= 7.4.0", "114 Automated Unit Tests"]
     ]
     t_sw = doc.add_table(rows=len(sw_data), cols=4)
     t_sw.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -627,18 +627,35 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
 
     add_heading2("4.5 Causal Lineage & Taint Propagation Tracker (ifc_lattice.py)")
     add_p("Updates session confidentiality and integrity levels and enforces the Provenance Dominance Invariant.")
-    add_code_block("""class DualLatticeTracker:
-    def update_session_read(self, session_id: str, artifact_conf: str, artifact_integ: str) -> None:
-        current = self.sessions.get(session_id, LatticeState.default())
-        new_conf = ConfidentialityLevel.join(current.confidentiality, artifact_conf)
-        new_integ = IntegrityLevel.meet(current.integrity, artifact_integ)
-        self.sessions[session_id] = LatticeState(confidentiality=new_conf, integrity=new_integ)
+    add_code_block("""class IFCLattice:
+    @classmethod
+    def propagate_provenance(cls, parents: Sequence[Provenance], derived_source_id: str, origin: str) -> Provenance:
+        if not parents:
+            return Provenance(source_id=derived_source_id, source_type=SourceType.AGENT_GENERATED,
+                              origin=origin, trust_level=TrustLevel.TRUSTED, sensitivity=SensitivityLevel.PUBLIC)
+        eff_sens, eff_trust = parents[0].sensitivity, parents[0].trust_level
+        has_untrusted = parents[0].contains_untrusted_instructions
+        for p in parents[1:]:
+            eff_sens = cls.join_sensitivity(eff_sens, p.sensitivity)
+            eff_trust = cls.meet_trust(eff_trust, p.trust_level)
+            if p.contains_untrusted_instructions:
+                has_untrusted = True
+        return Provenance(source_id=derived_source_id, source_type=SourceType.AGENT_GENERATED,
+                          origin=origin, trust_level=eff_trust, sensitivity=eff_sens,
+                          contains_untrusted_instructions=has_untrusted)
 
-    def can_flow(self, state: LatticeState, target_sink: SinkDefinition) -> bool:
-        # Provenance Dominance Enforcement: Untrusted integrity cannot invoke trusted sinks
-        if state.integrity == IntegrityLevel.UNTRUSTED and target_sink.required_integrity >= IntegrityLevel.TRUSTED:
-            return False
-        return ConfidentialityLevel.can_flow(state.confidentiality, target_sink.allowed_confidentiality)""")
+    @classmethod
+    def is_flow_permitted(cls, source_records: Sequence[Provenance] | None,
+                          destination_clearance: SensitivityLevel, requires_trusted_source: bool = True) -> tuple[bool, str]:
+        # Provenance Dominance Invariant: Untrusted sources cannot flow into privileged sinks
+        if not source_records:
+            return True, "No source taint detected"
+        for record in source_records:
+            if requires_trusted_source and record.trust_level == TrustLevel.UNTRUSTED:
+                return False, "Flow violation: Untrusted source cannot flow into sensitive sink"
+            if record.contains_untrusted_instructions:
+                return False, "Flow violation: Source contains untrusted instructions"
+        return True, "Information flow permitted" """)
 
     add_heading2("4.6 Cryptographic Approval Engine & Token Binding (approval_engine.py)")
     add_p("Generates SHA-256 bound approval tokens to prevent Time-of-Check to Time-of-Use (TOCTOU) payload swapping.")
@@ -663,18 +680,18 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
     # ==========================================
     add_chapter_title("5", "TESTING, RESULTS & ANALYSIS")
     add_heading2("5.1 Testing Methodology & Pytest Suite Breakdown")
-    add_p("The automated test suite contains 106 test cases across 19 modules, achieving 100% pass rate in 2.59 seconds.")
+    add_p("The automated test suite contains 114 test cases across 20 modules, achieving 100% pass rate in 3.38 seconds.")
 
-    add_table_caption("Table 5.1: Pytest Test Suite Execution Breakdown by Module (106 Tests)")
+    add_table_caption("Table 5.1: Pytest Test Suite Execution Breakdown by Module (114 Tests)")
     t_suite = doc.add_table(rows=6, cols=5)
     t_suite.alignment = WD_TABLE_ALIGNMENT.CENTER
     suite_data = [
         ["Module Category", "Test Files", "Test Count", "Pass Rate", "Runtime"],
-        ["Core Gateway & Auth", "test_gateway_routing, test_agent_auth", "14", "100%", "0.33 s"],
-        ["ML & DLP Detectors", "test_ml_detector_tier1, tier2, test_dlp", "24", "100%", "0.67 s"],
-        ["Causal Lineage & Invariant", "test_ifc_lattice, test_provenance_enforcement", "21", "100%", "0.21 s"],
-        ["Crypto & WAL Storage", "test_crypto_tokens, test_approval_store, wal", "27", "100%", "0.77 s"],
-        ["Scenarios & Aux", "test_scenarios_e01_e10, test_auxiliary", "20", "100%", "0.61 s"]
+        ["Core Gateway & Auth", "test_gateway, test_agent_auth, test_agent", "22", "100%", "0.45 s"],
+        ["ML, DLP & PDF Analyzers", "test_ml_detector, test_dlp, test_pdf_analyzer", "16", "100%", "0.85 s"],
+        ["Causal Lineage & Invariant", "test_ifc_lattice, test_provenance_enforcement", "13", "100%", "0.25 s"],
+        ["Crypto & WAL Storage", "test_approval_engine, approval_store", "23", "100%", "0.72 s"],
+        ["DevControl & Scenarios", "devcontrol, test_scenarios, api_access", "40", "100%", "1.11 s"]
     ]
     for r_idx, row in enumerate(suite_data):
         for c_idx, val in enumerate(row):
@@ -685,7 +702,7 @@ def create_kcc_report_docx(output_path="docs/KCC_AEGIS_Minor_Project_Report.docx
                 cell.paragraphs[0].runs[0].bold = True
                 set_cell_background(cell, "E2E8F0")
 
-    add_fig_caption("Fig. 5.1: Pytest Test Suite Terminal Execution Summary (106 Passed in 2.59s)")
+    add_fig_caption("Fig. 5.1: Pytest Test Suite Terminal Execution Summary (114 Passed in 3.38s)")
 
     add_heading2("5.2 Empirical Security Evaluation: 10 Attack Scenarios (E01–E10)")
     add_p("AEGIS was evaluated against 10 real-world scenarios representing indirect prompt injection, PII leakage, confused deputy tool calls, and TOCTOU attacks.")

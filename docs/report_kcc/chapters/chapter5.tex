@@ -1,23 +1,23 @@
 \chapter{TESTING, RESULTS \& ANALYSIS}
 
 \section{Testing Methodology \& Test Suite Breakdown}
-The testing suite was executed across 106 automated tests in 19 modules, achieving a 100\% pass rate in 2.59 seconds.
+The testing suite was executed across 114 automated tests in 20 modules, achieving a 100\% pass rate in 3.38 seconds.
 
 \begin{table}[htbp]
 \centering
-\caption{Pytest Test Suite Execution Breakdown by Module (106 Tests)}
+\caption{Pytest Test Suite Execution Breakdown by Module (114 Tests)}
 \label{tab:pytest_breakdown}
 \begin{tabular}{p{4.2cm} p{4.5cm} c c c}
 \toprule
 \textbf{Module Category} & \textbf{Test Modules} & \textbf{Count} & \textbf{Pass Rate} & \textbf{Time} \\
 \midrule
-Core Gateway \& Auth & \texttt{test\_gateway\_routing, test\_agent\_auth} & 14 & 100\% & 0.33 s \\
-ML \& DLP Detectors & \texttt{test\_ml\_detector\_tier1, tier2, dlp} & 24 & 100\% & 0.67 s \\
-Causal Lineage \& Invariant & \texttt{test\_ifc\_lattice, test\_provenance\_enforcement} & 21 & 100\% & 0.21 s \\
-Crypto \& WAL Storage & \texttt{test\_crypto\_tokens, approval\_store} & 27 & 100\% & 0.77 s \\
-Scenarios \& Aux & \texttt{test\_scenarios\_e01\_e10, auxiliary} & 20 & 100\% & 0.61 s \\
+Core Gateway \& Auth & \texttt{test\_gateway, test\_agent\_auth, test\_agent} & 22 & 100\% & 0.45 s \\
+ML, DLP \& PDF Analyzers & \texttt{test\_ml\_detector, test\_dlp, test\_pdf\_analyzer} & 16 & 100\% & 0.85 s \\
+Causal Lineage \& Invariant & \texttt{test\_ifc\_lattice, test\_provenance\_enforcement} & 13 & 100\% & 0.25 s \\
+Crypto \& WAL Storage & \texttt{test\_approval\_engine, approval\_store} & 23 & 100\% & 0.72 s \\
+DevControl \& Scenarios & \texttt{devcontrol, test\_scenarios, api\_access} & 40 & 100\% & 1.11 s \\
 \midrule
-\textbf{TOTAL SUITE} & \textbf{19 Test Modules} & \textbf{106} & \textbf{100\%} & \textbf{2.59 s} \\
+\textbf{TOTAL SUITE} & \textbf{20 Test Modules} & \textbf{114} & \textbf{100\%} & \textbf{3.38 s} \\
 \bottomrule
 \end{tabular}
 \end{table}

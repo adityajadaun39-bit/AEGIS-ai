@@ -42,7 +42,7 @@ flowchart TD
             ML_Detector["1. ML Prompt Injection Detector (ONNX + Heuristic)"]
             DLP_Scanner["2. DLP / Secret Scanner (API Keys, PII, Tokens)"]
             OPA_Policy["3. Policy Engine (Declarative Access Control)"]
-            IFC_Lattice["4. Information Flow Control (IFC Provenance Lattice)"]
+            Causal_Lineage["4. Causal Lineage & Provenance Dominance Tracker"]
             Approval_Gate["5. Cryptographic Approval Gate (SHA-256 Hash Bound)"]
         end
         
@@ -66,8 +66,8 @@ flowchart TD
     AuthModule --> ML_Detector
     ML_Detector --> DLP_Scanner
     DLP_Scanner --> OPA_Policy
-    OPA_Policy --> IFC_Lattice
-    IFC_Lattice --> Approval_Gate
+    OPA_Policy --> Causal_Lineage
+    Causal_Lineage --> Approval_Gate
 
     Approval_Gate -.->|Needs Approval| Dashboard
     Reviewer -.->|Cryptographic Review| Approval_Gate
@@ -100,7 +100,7 @@ flowchart TD
 |---|---|---|---|
 | **Member 1** | **Team Lead — Gateway Core & Ingress Proxy** | `backend/app.py`<br>`backend/security/gateway.py`<br>`backend/security/approval_engine.py` | *System Architecture, Reverse Proxy Design & Cryptographic Token Binding* |
 | **Member 2** | **AI Security Specialist — ML & DLP Engines** | `backend/security/ml_detector.py`<br>`backend/security/dlp_engine.py`<br>`tests/test_ml_detector.py` | *Adversarial Machine Learning, Injection Classification & Data Loss Prevention* |
-| **Member 3** | **Formal Policy Specialist — IFC Lattice & Provenance** | `backend/security/policy_engine.py`<br>`backend/security/provenance_context.py`<br>`backend/security/ifc_lattice.py` | *Formal Information Flow Control (IFC) Lattice Models & Declarative Access Rules* |
+| **Member 3** | **Policy & Lineage Specialist — Causal Taint & Provenance** | `backend/security/policy_engine.py`<br>`backend/security/provenance_context.py`<br>`backend/security/ifc_lattice.py` | *Causal Lineage Architecture, Provenance Dominance & Declarative Access Rules* |
 | **Member 4** | **Full-Stack SOC Specialist — UI & Telemetry** | `frontend/dashboard.py`<br>`backend/app.py` (SSE `/audit/stream`) | *Human-Computer Interaction in Security Dashboards & Real-Time Threat Visualization* |
 | **Member 5** | **DevOps & QA Engineer — Benchmarks & Packaging** | `Dockerfile`<br>`docker-compose.yml`<br>`evaluation/run_load_test.py`<br>`.github/workflows/ci.yml` | *Continuous Integration, Reliability Stress Benchmarking & Cloud Containerization* |
 

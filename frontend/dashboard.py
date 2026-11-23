@@ -104,9 +104,9 @@ with st.sidebar:
     st.markdown(
         """
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: #64748b; line-height: 1.5;">
-            Formal Model: Denning/Biba Lattices<br/>
+            Security Architecture: Reverse Proxy Gateway<br/>
             Engine: FastAPI + SQLite WAL<br/>
-            Theorem 1: Provenance Dominance
+            Invariant: Provenance Dominance
         </div>
         """,
         unsafe_allow_html=True,
@@ -240,7 +240,7 @@ with kpi_col2:
             <div class="double-bezel-inner">
                 <div class="kpi-title">Quarantined Attacks & Violations</div>
                 <div class="kpi-value" style="color: #fb7185;">{denials}</div>
-                <div class="kpi-subtext">🛡️ Theorem 1 Invariant Active</div>
+                <div class="kpi-subtext">🛡️ Provenance Dominance Active</div>
             </div>
         </div>
         """,
@@ -483,7 +483,7 @@ with tab_dag:
             x=0.88, y=0.5, ax=0.52, ay=0.5,
             xref="x", yref="y", axref="x", ayref="y",
             showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2, arrowcolor="#f43f5e",
-            text="Theorem 1 Enforced", font=dict(family="JetBrains Mono", size=10, color="#f43f5e"),
+            text="Provenance Dominance Enforced", font=dict(family="JetBrains Mono", size=10, color="#f43f5e"),
             yshift=15,
         )
 
@@ -526,7 +526,7 @@ with tab_hitl:
     st.markdown(
         """
         <div style="background: rgba(0, 212, 255, 0.08); border-left: 4px solid #00d4ff; padding: 0.75rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem;">
-            <strong style="color: #00d4ff; font-family: 'Space Grotesk';">THEOREM 1 INVARIANT:</strong>
+            <strong style="color: #00d4ff; font-family: 'Space Grotesk';">PROVENANCE DOMINANCE INVARIANT:</strong>
             <span style="color: #cbd5e1; font-size: 0.88rem;">
                 Human-in-the-Loop approvals are cryptographically bound to the SHA-256 payload hash.
                 However, if the causal lineage originates from an untrusted source, the gateway will <strong>nullify the approval</strong> and fail closed.
@@ -693,7 +693,7 @@ with tab_sandbox:
                 <div style="background: rgba(13, 18, 29, 0.7); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.25rem;">
                     <h4 style="color: #f59e0b; margin: 0 0 0.5rem 0;">Stage 3: The Climax (HITL Override)</h4>
                     <p style="color: #94a3b8; font-size: 0.85rem;">
-                        Attacker tricks a human operator into clicking 'Approve'. Theorem 1 activates: <em>Provenance Dominates Approval</em>.
+                        Attacker tricks a human operator into clicking 'Approve'. Provenance Dominance activates: <em>Provenance Dominates Approval</em>.
                     </p>
                 </div>
                 """,
@@ -723,7 +723,7 @@ with tab_sandbox:
                 st.markdown(
                     f"""
                     <div class="badge-deny" style="padding: 0.5rem 1rem; width: 100%; text-align: center; margin-top: 0.5rem;">
-                        🛑 DENIED BY THEOREM 1 &bull; {res['reason']}
+                        🛑 DENIED BY PROVENANCE DOMINANCE &bull; {res['reason']}
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -864,8 +864,8 @@ with tab_doc:
             <div style="font-size: 0.85rem; color: #94a3b8;">
                 <strong style="color: #00d4ff;">HOW AEGIS DEFENDS AGAINST DOCUMENT INJECTIONS:</strong>
                 When an AI agent reads an external document (resume, invoice, contract), adversaries can embed invisible prompts or instructions (OWASP LLM01). 
-                AEGIS extracts text, scans for covert zero-width characters and prompt injections, runs DLP secret redaction, and binds formal <strong>Dual-Lattice Provenance</strong>. 
-                If tainted, <strong>Theorem 1</strong> permanently locks out all downstream outbound exfiltration actions.
+                AEGIS extracts text, scans for covert zero-width characters and prompt injections, runs DLP secret redaction, and binds <strong>Causal Taint Lineage</strong>. 
+                If tainted, the <strong>Provenance Dominance Invariant</strong> permanently locks out all downstream outbound exfiltration actions.
             </div>
         </div>
         """,
@@ -1017,7 +1017,7 @@ with tab_doc:
                 f"""
                 <div class="double-bezel-card">
                     <div class="double-bezel-inner">
-                        <div class="kpi-title">Dual-Lattice Label</div>
+                        <div class="kpi-title">Provenance Label</div>
                         <div class="kpi-value" style="color: {trust_clr}; font-size: 1.1rem;">{trust}</div>
                         <div class="kpi-subtext">Sensitivity: <strong style="color: #38bdf8;">{sens}</strong></div>
                     </div>
@@ -1056,7 +1056,7 @@ with tab_doc:
             )
 
             # Governance Alert
-            gov_clr = "#fb7185" if "THEOREM 1" in sec["governance_decision"] else "#34d399"
+            gov_clr = "#fb7185" if ("THEOREM 1" in sec["governance_decision"] or "PROVENANCE DOMINANCE" in sec["governance_decision"]) else "#34d399"
             st.markdown(
                 f"""
                 <div style="background: rgba(15, 23, 42, 0.8); border-left: 4px solid {gov_clr}; padding: 0.8rem 1.2rem; border-radius: 0 8px 8px 0; margin-bottom: 1.2rem;">
@@ -1074,7 +1074,7 @@ with tab_doc:
             if st.button("🚀 Attempt Outbound Email Dispatch", key="btn_sim_exfil", use_container_width=True):
                 if sec["provenance"]["trust_level"] == "UNTRUSTED":
                     st.error("🛡️ AEGIS ENFORCEMENT BLOCKED THE CALL!\n\n"
-                             "Status: 403 Forbidden (Theorem 1 Violation)\n\n"
+                             "Status: 403 Forbidden (Provenance Dominance Violation)\n\n"
                              "Reason: Agent memory is TAINTED by untrusted document provenance. "
                              "Even with human approval, outbound email dispatch is strictly prohibited!")
                 elif sec["provenance"]["sensitivity"] == "CONFIDENTIAL":
@@ -1396,7 +1396,7 @@ with tab_deck:
             "content": """
             - **Scene 1:** Benign public document read (< 20ms ALLOW).
             - **Scene 2:** Indirect prompt injection attack (QUARANTINED with ML score 0.92+).
-            - **Scene 3:** The Human Approval Trap (Theorem 1 blocks tainted action).
+            - **Scene 3:** The Human Approval Trap (Provenance Dominance blocks tainted action).
             - **Scene 4:** DLP secret interception & forensic Plotly DAG review.
             """,
             "note": "Switch to live browser tab at localhost:8501 and execute the 4-minute demo.",
