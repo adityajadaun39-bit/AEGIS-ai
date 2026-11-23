@@ -1,0 +1,69 @@
+\chapter{SYSTEM SPECIFICATIONS \& REQUIREMENTS}
+
+\section{Hardware Specifications}
+To ensure low latency and high availability for in-line gateway inspection, the development and deployment environments were benchmarked against the hardware specifications listed in Table~\ref{tab:hardware_specs}.
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware Specifications for Development and Deployment}
+\label{tab:hardware_specs}
+\begin{tabular}{p{3.5cm} p{5.5cm} p{5.5cm}}
+\toprule
+\textbf{Component} & \textbf{Minimum Requirement} & \textbf{Recommended (Production)} \\
+\midrule
+Processor (CPU) & Intel Core i5 / AMD Ryzen 5 (4 Cores, 2.4 GHz) & Intel Xeon / AMD EPYC (8+ Cores, 3.2 GHz) \\
+RAM & 8 GB DDR4 & 16 GB -- 32 GB DDR4/DDR5 \\
+Storage & 20 GB SSD & 100 GB NVMe PCIe 4.0 SSD \\
+Network & 100 Mbps Ethernet / Wi-Fi & 1 Gbps Full-Duplex Low-Latency NIC \\
+Hardware Acceleration & None (CPU-Only Supported) & NVIDIA T4 / A10G (Optional) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Software Specifications}
+The software stack leverages modern asynchronous Python libraries, ONNX inference engines, and embedded transactional databases as specified in Table~\ref{tab:software_specs}.
+
+\begin{table}[htbp]
+\centering
+\caption{Software Specifications and Runtime Environment}
+\label{tab:software_specs}
+\begin{tabular}{p{3.2cm} p{3.8cm} p{2.2cm} p{5.2cm}}
+\toprule
+\textbf{Software Layer} & \textbf{Technology / Library} & \textbf{Version} & \textbf{Role in AEGIS} \\
+\midrule
+Operating System & Windows 11 / Ubuntu Linux & 22.04 LTS & Host Operating System \\
+Programming Language & Python & 3.11 / 3.13 & Core Backend \& Security Logic \\
+Web Framework & FastAPI / Uvicorn & $\ge$ 0.104.0 & Asynchronous HTTP Reverse Proxy \\
+ML Runtime & ONNX Runtime & $\ge$ 1.16.0 & Quantized Transformer Classifier \\
+DLP Engine & Microsoft Presidio / Regex & $\ge$ 2.2.0 & Secret \& PII Detection \\
+Database & SQLite 3 (WAL Mode) & $\ge$ 3.42.0 & High-Concurrency Audit Logger \\
+Frontend UI & Streamlit & $\ge$ 1.28.0 & SOC Console \& Lineage DAG \\
+Testing Harness & Pytest / pytest-asyncio & $\ge$ 7.4.0 & Automated Regression Test Suite \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Functional Requirements}
+The functional capabilities of the gateway include:
+\begin{itemize}
+    \item \textbf{FR1: Ingress Authentication \& Throttling:} Verifying agent identity via HMAC-SHA256 bearer tokens.
+    \item \textbf{FR2: Dual-Tier Prompt Injection Detection:} Combining sub-millisecond regex signatures with neural ONNX classifiers.
+    \item \textbf{FR3: Data Loss Prevention (DLP):} Automated redaction and blocking of AWS keys, private certificates, and customer PII.
+    \item \textbf{FR4: Dual-Lattice Lineage Tracking:} Maintaining session-level confidentiality and integrity levels across multi-step execution traces.
+    \item \textbf{FR5: Cryptographic Approval Tokens:} Generating canonical SHA-256 tokens binding action parameters to human approval requests.
+    \item \textbf{FR6: Provenance-Dominated Approval:} Enforcing Theorem 1 to override human approval when session memory is tainted.
+    \item \textbf{FR7: Asynchronous Audit Logging:} Writing structured JSON events to a high-concurrency database.
+\end{itemize}
+
+\section{Non-Functional Requirements}
+The operational standards enforced include:
+\begin{itemize}
+    \item \textbf{NFR1: Latency Overhead:} Average gateway latency overhead must remain under 25~ms.
+    \item \textbf{NFR2: Concurrency \& Lock Freedom:} Withstand 50 concurrent worker threads at $\ge 20$ req/s with 0 database lock errors.
+    \item \textbf{NFR3: Drop-In Proxy Compatibility:} Zero modifications required on client AI agent implementations.
+    \item \textbf{NFR4: Fail-Closed Security:} Defaulting to HTTP 403 Forbidden upon unhandled exceptions or timeouts.
+    \item \textbf{NFR5: Automated Test Coverage:} Maintaining a 100\% pass rate across all automated unit and integration tests.
+\end{itemize}
+
+\section{Feasibility Study}
+Technical feasibility is validated via Python's asynchronous event loop and ONNX quantization. Operational feasibility is demonstrated by reverse-proxy integration. Economic feasibility is achieved by deploying permissive open-source components without recurring commercial API expenses.

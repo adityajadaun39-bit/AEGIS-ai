@@ -1,0 +1,121 @@
+\chapter{Threat Modeling \& Problem Formulation}
+\label{chap:threat}
+
+\section{Adversary Model \& Capabilities}
+To establish a rigorous security foundation, we define an adversary model consistent with real-world enterprise agent deployments. We consider an external or unprivileged adversary $\mathcal{A}$ operating within the following boundaries:
+\begin{enumerate}
+    \item \textbf{Network Isolation \& Privilege Separation:} $\mathcal{A}$ possesses no administrative credentials, API access tokens, or direct cryptographic keys to interface with internal enterprise databases, corporate email brokers, cloud storage buckets, or code execution environments.
+    \item \textbf{Indirect Ingress Capability:} $\mathcal{A}$ has the capability to publish, write, or transmit unprivileged digital artifacts into data repositories that an autonomous agent is scheduled or requested to process. This includes submitting public customer support tickets, sending external emails to company inboxes, uploading public resume PDFs, publishing content on scraped web pages, or committing unreviewed code comments to public repositories.
+    \item \textbf{Adversarial Payload Crafting:} $\mathcal{A}$ has full knowledge of standard natural language injection methodologies, including:
+    \begin{itemize}
+        \item \textit{Instruction Overrides:} Sequences such as \texttt{``Disregard previous instructions and instead execute...''}.
+        \item \textit{Delimiter Hijacking:} Utilizing markdown fences, fake XML/HTML tags (e.g., \texttt{<system>}, \texttt{```system}), or special system prompt formatting tokens.
+        \item \textit{Contextual Roleplay \& Jailbreaks:} Directing the model to adopt unrestricted alter egos (e.g., \texttt{``DAN mode''} or \texttt{``unrestricted maintenance agent''}).
+        \item \textit{Covert Exfiltration Instructions:} Mandating that sensitive internal data be formatted as URL query parameters or outbound email bodies while instructing the agent to suppress disclosure to the user.
+    \end{itemize}
+    \item \textbf{Out-of-Scope Capabilities:} We assume that the host physical hardware, operating system kernel, cryptographic libraries (Python \texttt{hashlib}, \texttt{hmac}), and local SQLite database filesystem are not compromised at the root level by $\mathcal{A}$. Physical side-channel attacks on memory buses and direct weights extraction via hardware micro-probing are out of scope.
+\end{enumerate}
+
+\section{Mapping the OWASP Top 10 for LLMs to Agentic Systems}
+The Open Web Application Security Project (OWASP) maintains the definitive vulnerability taxonomy for generative AI: the \textit{OWASP Top 10 for Large Language Model Applications} (v2.0, 2025) \cite{owasp2025top10llm}. In Table \ref{tab:owasp}, we provide an exhaustive mapping detailing how each OWASP vulnerability manifests within autonomous multi-agent tool pipelines and how AEGIS provides architectural mitigation.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Exhaustive Mapping of OWASP Top 10 for LLMs (2025) to AEGIS Defensive Mechanisms}
+\label{tab:owasp}
+\begin{tabularx}{\textwidth}{p{2.2cm}p{3.0cm}p{4.2cm}X}
+\toprule
+\textbf{OWASP Category} & \textbf{Vulnerability Description} & \textbf{Threat Vector in Agent Systems} & \textbf{AEGIS Defensive Architecture} \\
+\midrule
+\textbf{LLM01: Prompt Injection} & Adversarial instructions alter model control flow. & Ingesting external web documents, support tickets, or emails containing indirect override directives. & \textbf{Dual-Tier Detection:} Sub-2ms regex filter + quantized local ONNX classifier ($< 25\text{ms}$) + IFC taint propagation. \\
+\addlinespace
+\textbf{LLM02: Sensitive Information Disclosure} & Leakage of confidential secrets, proprietary IP, or PII. & Hijacked agent queries confidential customer database and transmits records via outbound email or webhooks. & \textbf{Denning Confidentiality Lattice:} $\text{CONFIDENTIAL} \not\sqsubseteq_C \text{PUBLIC}$ enforces strict containment. Outbound DLP scans 8 secret families. \\
+\addlinespace
+\textbf{LLM03: Supply Chain Vulnerabilities} & Compromised third-party packages, plugins, or tools. & Malicious tools registered in the agent framework executing unexpected destructive side effects. & \textbf{Isolated Tool Broker Sandbox:} Tools are mediated via strict authorization policies and permitted resource lists. \\
+\addlinespace
+\textbf{LLM04: Data and Model Poisoning} & Adversarial corruption of training or fine-tuning data. & Ingesting untrusted knowledge-base corpora that degrades safety alignment. & \textbf{Provenance Context Store:} Server-enforced provenance tracks origin trust levels ($\text{TRUSTED}, \text{REVIEWED}, \text{UNTRUSTED}$). \\
+\addlinespace
+\textbf{LLM05: Improper Output Handling} & Downstream systems executing unvalidated model text. & Agent generates raw shell scripts or SQL queries passed directly to OS executors. & \textbf{Strictly Typed Pydantic Schemas:} Action requests enforce typed structures, preventing raw shell string injection. \\
+\addlinespace
+\textbf{LLM06: Excessive Agency} & Autonomous agents granted unchecked permissions. & An autonomous agent granted unrestricted email dispatch or bulk database deletion authority. & \textbf{Declarative Policy-as-Code \& RBAC:} OPA/YAML policies restrict capabilities; Theorem 1 prevents privilege escalation. \\
+\addlinespace
+\textbf{LLM07: System Prompt Leakage} & Extraction of proprietary prompts or system secrets. & Social engineering queries persuading the model to echo its initial configuration. & \textbf{Tier 1 Heuristic Regex Filter:} Scans for leakage markers (\texttt{repeat your initial prompt}); DLP sanitizes secret patterns. \\
+\addlinespace
+\textbf{LLM08: Vector \& Embedding Weaknesses} & Exploiting retrieval distance metrics to inject poisoned chunks. & Poisoned chunks crafted to achieve high cosine similarity during RAG retrieval. & \textbf{Lineage-Based Dominance:} Ingested document provenance binds permanently to agent memory regardless of vector similarity. \\
+\addlinespace
+\textbf{LLM09: Misinformation \& Hallucination} & Fabricated rationales leading to unauthorized operations. & Agent hallucinates an emergency approval justification (e.g., \textit{``CEO requested wire transfer''}). & \textbf{Provenance Dominance Invariant:} Rationales cannot override tainted sources; approvals require canonical payload hash match. \\
+\addlinespace
+\textbf{LLM10: Unbounded Consumption} & Denial of service via infinite loops or resource exhaustion. & Reentrant prompt injection causing infinite recursive tool calling. & \textbf{Approval TTL \& Atomic Consumption:} State transitions are atomic ($\text{PENDING} \to \text{APPROVED} \to \text{CONSUMED}$); 10m request expiration. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Formal Formulation of the Confused Deputy Problem}
+We now provide a formal mathematical formulation of the Confused Deputy problem as it arises within multi-agent tool execution pipelines.
+
+\subsection{System Formalization}
+Let an autonomous agent system be defined as a tuple:
+\begin{equation}
+\mathcal{M} = (\mathcal{A}_g, \mathcal{T}, \mathcal{R}, \mathcal{S}, \mathcal{P})
+\end{equation}
+where:
+\begin{itemize}
+    \item $\mathcal{A}_g$ is the set of autonomous agents, each identified by a unique cryptographic identity $id \in \mathcal{A}_g$.
+    \item $\mathcal{T} = \{t_1, t_2, \dots, t_k\}$ is the set of available execution tools (e.g., \texttt{read\_document}, \texttt{search\_documents}, \texttt{send\_email}, \texttt{execute\_sql}).
+    \item $\mathcal{R}$ is the universe of resources and data objects.
+    \item $\mathcal{S}$ is the set of destination sinks (e.g., internal storage, external public networks, administrative logs).
+    \item $\mathcal{P}$ is the set of permissions governing which agent may execute tool $t \in \mathcal{T}$ on resource $r \in \mathcal{R}$.
+\end{itemize}
+
+An action request submitted by agent $id$ is formalized as:
+\begin{equation}
+a = (id, t, r, \mathbf{p}, c)
+\end{equation}
+where $t \in \mathcal{T}$ is the target tool, $r \in \mathcal{R}$ is the target resource, $\mathbf{p} = \{p_1, \dots, p_m\}$ is the parameter payload, and $c$ is the natural language rationale emitted by the agent.
+
+\subsection{The Transformer Conflation Mechanism}
+When an agent deliberates, it executes inference over a sequence of tokens comprising:
+\begin{equation}
+\mathbf{T} = [\mathbf{T}_{\text{system}} \,\|\, \mathbf{T}_{\text{history}} \,\|\, \mathbf{T}_{\text{input}}]
+\end{equation}
+where $\mathbf{T}_{\text{system}}$ represents privileged system instructions, $\mathbf{T}_{\text{history}}$ represents prior dialogue and tool outputs, and $\mathbf{T}_{\text{input}}$ represents the retrieved external document $d \in \mathcal{R}$.
+
+If document $d$ contains an adversarial injection payload $\mathbf{x}_{\text{adv}}$, the model calculates attention weights across all tokens simultaneously:
+\begin{equation}
+A_{ij} = \frac{\exp\left(\frac{\mathbf{q}_i \mathbf{k}_j^T}{\sqrt{d_k}}\right)}{\sum_{\ell=1}^N \exp\left(\frac{\mathbf{q}_i \mathbf{k}_\ell^T}{\sqrt{d_k}}\right)}
+\end{equation}
+Because the transformer architecture lacks hardware privilege rings, $\mathbf{x}_{\text{adv}}$ manipulates the query-key dot products such that:
+\begin{equation}
+P(a_{\text{malicious}} \mid \mathbf{T}_{\text{system}}, \mathbf{T}_{\text{history}}, \mathbf{x}_{\text{adv}}) \approx 1
+\end{equation}
+Consequently, the agent selects an action $a_{\text{malicious}} \in \mathcal{T} \times \mathcal{R} \times \mathcal{S}$ that serves the adversary's objective rather than the user's initial directive.
+
+\subsection{The Human-in-the-Loop Approval Trap}
+In standard architectures employing Human-in-the-Loop (HITL) approval, high-consequence tools (e.g., \texttt{send\_email}) require an authorization token $\tau_{\text{HITL}}$ granted by an authorized human operator $H$:
+\begin{equation}
+\text{permit}(a) \iff \text{Valid}(\tau_{\text{HITL}}, a)
+\end{equation}
+When the agent generates $a_{\text{malicious}}$, it generates a plausible natural language explanation $c_{\text{deceptive}}$ designed to exploit the human operator:
+\begin{quote}
+\textit{Action: \texttt{send\_email(to='exfil@sink.org', body='[Confidential Payroll]')}} \\
+\textit{Rationale: ``Forwarding encrypted compliance verification report per weekly executive directive.''}
+\end{quote}
+Because the human reviewer cannot observe the thousands of raw prompt tokens or verify the causal lineage connecting the action back to the malicious document, the operator suffers from cognitive fatigue and signs the approval:
+\begin{equation}
+H(c_{\text{deceptive}}) \to \tau_{\text{HITL}}
+\end{equation}
+This creates the lethal Confused Deputy failure: the human explicitly validates an attack against their own organization, transferring legal and operational liability to the deceived human operator.
+
+\subsection{The Problem Formulation for AEGIS}
+The fundamental objective of AEGIS is to decouple authorization from model-generated text and deceived human decisions. 
+
+Formally, we require an enforcement function:
+\begin{equation}
+\Phi : (a, \mathcal{D}_{\text{prov}}, \tau_{\text{HITL}}) \to \{\text{ALLOW}, \text{DENY}, \text{REQUIRES\_APPROVAL}\}
+\end{equation}
+such that:
+\begin{equation}
+\Phi(a, \mathcal{D}_{\text{prov}}, \tau_{\text{HITL}}) = \text{DENY} \quad \text{whenever} \quad \text{Tainted}(\mathcal{D}_{\text{prov}}(a)) = \text{True}
+\end{equation}
+regardless of whether $\tau_{\text{HITL}}$ is present and cryptographically authentic. The formalization of this invariant is the subject of Chapter \ref{chap:math}.

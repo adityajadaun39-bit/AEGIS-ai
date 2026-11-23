@@ -1,0 +1,168 @@
+\chapter{5-Member Team Work Breakdown Structure \& Viva Defense Preparation}
+\label{chap:wbs}
+
+\section{Five-Member Engineering Team Attribution}
+The conceptualization, mathematical formalization, software architecture, and empirical verification of AEGIS were executed by a balanced, multi-disciplinary five-member engineering team. Each member assumed primary architectural ownership over dedicated subsystems.
+
+\subsection{Team Member Roster \& Module Ownership}
+\begin{enumerate}
+    \item \textbf{Farhan Mallik (Team Lead \& System Architect):}
+    \begin{itemize}
+        \item \textbf{Primary Modules:} \texttt{backend/app.py}, \texttt{backend/security/gateway.py}, \texttt{backend/security/approval\_engine.py}, \texttt{backend/schemas/actions.py}, \texttt{backend/schemas/approval.py}.
+        \item \textbf{Engineering Contributions:} Engineered the transparent FastAPI reverse proxy; implemented timing-safe HMAC authentication (\texttt{hmac.compare\_digest}); implemented canonical JSON SHA-256 payload binding; designed the atomic approval state machine (\texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{CONSUMED}); led team coordination and architectural design.
+        \item \textbf{Report Chapters Authored:} Chapter \ref{chap:intro} (Introduction), Chapter \ref{chap:arch} (System Architecture), and Preliminary Front Matter.
+    \end{itemize}
+
+    \item \textbf{Team Member 2 (Machine Learning \& Threat Detection Lead):}
+    \begin{itemize}
+        \item \textbf{Primary Modules:} \texttt{backend/security/ml\_detector.py}, \texttt{backend/security/dlp\_engine.py}, \texttt{tests/test\_ml\_detector.py}, \texttt{tests/test\_dlp\_engine.py}.
+        \item \textbf{Engineering Contributions:} Developed the dual-tier prompt injection detection pipeline; compiled the sub-2ms Tier 1 heuristic regex scanner covering 6 injection families; integrated the local INT8 ONNX transformer sequence classifier; engineered the high-entropy Data Loss Prevention engine covering 8 secret regexes.
+        \item \textbf{Report Chapters Authored:} Chapter \ref{chap:impl} (Implementation Details: ML Detector \& DLP).
+    \end{itemize}
+
+    \item \textbf{Team Member 3 (Security \& Formal Methods Lead):}
+    \begin{itemize}
+        \item \textbf{Primary Modules:} \texttt{backend/security/ifc\_lattice.py}, \texttt{backend/security/policy\_engine.py}, \texttt{backend/security/provenance\_context.py}, \texttt{policies/agent\_access.rego}, \texttt{policies/default\_policy.yaml}.
+        \item \textbf{Engineering Contributions:} Formulated the dual-lattice Information Flow Control model; implemented Least Upper Bound Join ($\sqcup_C$) and Greatest Lower Bound Meet ($\sqcap_I$) operations; formulated and mathematically proved Theorem \ref{thm:dominance} (Provenance Dominance Invariant) and Lemmas 1--3; integrated Open Policy Agent (OPA) with in-process YAML fallback.
+        \item \textbf{Report Chapters Authored:} Chapter \ref{chap:threat} (Threat Modeling), Chapter \ref{chap:math} (Mathematical Security Formulation).
+    \end{itemize}
+
+    \item \textbf{Team Member 4 (DevOps, Concurrency \& Performance Lead):}
+    \begin{itemize}
+        \item \textbf{Primary Modules:} \texttt{devcontrol/db.py}, \texttt{evaluation/run\_load\_test.py}, \texttt{evaluation/run\_benchmark.py}, \texttt{evaluation/run\_evaluation.py}, \texttt{Dockerfile}, \texttt{docker-compose.yml}.
+        \item \textbf{Engineering Contributions:} Architected the SQLite Write-Ahead Logging (WAL) concurrency engine with connection pooling and busy-timeout backoff; authored the 50-worker load testing harness validating zero database lock errors; automated the 300-run reliability benchmark; authored container orchestration manifests.
+        \item \textbf{Report Chapters Authored:} Chapter \ref{chap:results} (Experimental Results \& Benchmarks).
+    \end{itemize}
+
+    \item \textbf{Team Member 5 (Frontend, Visualization \& SOC Lead):}
+    \begin{itemize}
+        \item \textbf{Primary Modules:} \texttt{frontend/dashboard.py}, \texttt{frontend/static/styles.css}, \texttt{frontend/deck.html}.
+        \item \textbf{Engineering Contributions:} Engineered the tactical dark-mode Security Operations Center dashboard using Streamlit; implemented dynamic Plotly Directed Acyclic Graph (DAG) rendering of causal provenance and taint; integrated real-time Server-Sent Events (SSE) telemetry; built the interactive 4-stage viva attack-defense sandbox.
+        \item \textbf{Report Chapters Authored:} Chapter \ref{chap:wbs} (Team WBS \& Viva Defense), Chapter \ref{chap:conclusion} (Conclusion \& Future Scope).
+    \end{itemize}
+\end{enumerate}
+
+\section{15-Week Milestone Implementation Roadmap}
+Table \ref{tab:wbs_timeline} provides the structured 15-week milestone roadmap detailing phase deliverables and team effort distribution.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{15-Week Capstone Engineering Milestone Timeline}
+\label{tab:wbs_timeline}
+\begin{tabularx}{\textwidth}{cclp{5.5cm}c}
+\toprule
+\textbf{Phase} & \textbf{Weeks} & \textbf{Milestone} & \textbf{Key Deliverables \& Objectives} & \textbf{Lead Members} \\
+\midrule
+\multirow{2}{*}{\textbf{1}} & \multirow{2}{*}{1--3} & M1.1 & Reverse proxy scaffold, FastAPI routing, HMAC auth. & Farhan, M4 \\
+ & & M1.2 & Pydantic v2 schemas, atomic approval state store. & Farhan, M4 \\
+\addlinespace
+\multirow{4}{*}{\textbf{2}} & \multirow{4}{*}{4--7} & M2.1 & Dual-tier detector: Tier 1 regex + ONNX runtime. & M2, Farhan \\
+ & & M2.2 & High-entropy 8-pattern DLP engine and sanitization. & M2 \\
+ & & M2.3 & Dual-lattice IFC model and Theorem 1 formal proof. & M3 \\
+ & & M2.4 & Declarative policy engine (OPA Rego and YAML). & M3 \\
+\addlinespace
+\multirow{3}{*}{\textbf{3}} & \multirow{3}{*}{8--10} & M3.1 & SQLite WAL mode engine, pool, \texttt{attack\_id} correlation. & M4, M3 \\
+ & & M3.2 & Streamlit SOC console, Plotly DAG visualizer. & M5, M2 \\
+ & & M3.3 & Cryptographic review desk and SSE live telemetry. & M5, Farhan \\
+\addlinespace
+\multirow{4}{*}{\textbf{4}} & \multirow{4}{*}{11--13} & M4.1 & 106-test pytest regression verification suite. & All Members \\
+ & & M4.2 & 10-scenario suite (E01--E10) and 300-run benchmark. & M4, M3 \\
+ & & M4.3 & 50-worker concurrency load stress test. & M4 \\
+ & & M4.4 & Docker Compose multi-service orchestration. & M4, Farhan \\
+\addlinespace
+\multirow{2}{*}{\textbf{5}} & \multirow{2}{*}{14--15} & M5.1 & 15-minute viva presentation script and slide deck. & All Members \\
+ & & M5.2 & Publication-grade Academic Capstone Project Report. & All Members \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{15-Minute Capstone Presentation Script}
+To ensure optimal pacing and technical articulation during the capstone defense, the team structured a strict 15-minute presentation script with designated speaker timestamps.
+
+\subsection{Presentation Timeline \& Cues}
+\begin{itemize}
+    \item \textbf{[00:00 -- 02:00] Member 1 (Farhan Mallik):} 
+    \textit{The Agentic Crisis \& The Confused Deputy Trap.} Introduce the rise of autonomous agents, the collapse of prompt-level security, and explain how indirect prompt injection turns an authorized agent into a Confused Deputy.
+    \item \textbf{[02:00 -- 03:45] Member 3:} 
+    \textit{Mathematical Security Formulation \& Theorem 1.} Present the dual-lattice model (Denning join $\sqcup_C$, Biba meet $\sqcap_I$). Formally state Theorem \ref{thm:dominance} and explain why human approval cannot override data taint.
+    \item \textbf{[03:45 -- 05:30] Member 2:} 
+    \textit{Dual-Tier Inspection Pipeline \& High-Entropy DLP.} Explain the sub-2ms heuristic regex scanner, the local ONNX DeBERTa-v3 inference engine, and demonstrate outbound secret redaction across 8 key patterns.
+    \item \textbf{[05:30 -- 07:15] Member 4:} 
+    \textit{Concurrency Engineering \& Empirical Validation.} Present SQLite WAL mode concurrency, the 106-test pass rate, the 300-run reliability metrics, and the 50-worker load test with 0 lock errors.
+    \item \textbf{[07:15 -- 08:00] Member 1 \& Member 5:} 
+    \textit{Architectural Synthesis \& Live Demonstration Setup.} Hand over to the live tactical SOC console.
+    \item \textbf{[08:00 -- 12:00] Member 5 (Pilot) + Member 1 (Narrator):} 
+    \textit{Interactive 4-Stage Live Viva Demonstration.}
+    \begin{enumerate}
+        \item \textit{Stage 1: Benign Workflow.} Execute a public document read ($< 15\text{ ms}$, status: \texttt{ALLOW}).
+        \item \textit{Stage 2: Ingress Indirect Injection.} Ingest an untrusted resume with hidden instructions (\texttt{QUARANTINED}, threat score: 0.92).
+        \item \textit{Stage 3 (The Showstopper): Compromised HITL Bypass Attempt.} Demonstrate the hijacked agent requesting email dispatch. The human approver clicks \textit{Approve}. The gateway invokes Theorem \ref{thm:dominance}: Step 4 halts execution, nullifying the human approval and issuing a terminal \texttt{DENY}.
+        \item \textit{Stage 4: Outbound DLP Intercept \& Lineage DAG.} Demonstrate interception of an unredacted AWS secret key, displaying the red taint graph on the interactive Plotly DAG.
+    \end{enumerate}
+    \item \textbf{[12:00 -- 15:00] All Team Members:} 
+    \textit{Oral Defense \& Technical Question-and-Answer Session.}
+\end{itemize}
+
+\section{Ten High-Probability Examiner Questions \& Model Answers}
+Below are 10 rigorous model answers prepared for high-probability examiner inquiries.
+
+\subsection{Question 1: Prompt Defenses vs. External Gateways}
+\textbf{Examiner:} \textit{``Why can't we simply use a stronger system prompt or prompt guardrail to prevent indirect prompt injection?''} \\
+\textbf{Designated Respondent:} Member 2 / Farhan Mallik. \\
+\textbf{Model Answer:} \\
+\textit{``In modern transformer architectures, system instructions and untrusted document tokens share the exact same context window and token stream. The self-attention mechanism computes pairwise dot-product affinities across all tokens indiscriminately. An adversary can employ delimiter hijacking, semantic roleplay, or few-shot instruction overrides to convince the model that previous instructions are deprecated. Relying on an LLM to police itself is fundamentally insecure. AEGIS treats the neural network as an untrusted computation engine and enforces security externally at the tool proxy layer.''}
+
+\subsection{Question 2: Overriding Human Approval}
+\textbf{Examiner:} \textit{``Isn't the human in the loop supposed to be the ultimate security authority? Why does AEGIS override a human approval?''} \\
+\textbf{Designated Respondent:} Member 3. \\
+\textbf{Model Answer:} \\
+\textit{``This is the central innovation of AEGIS. Empirical red-teaming proves that human reviewers suffer from alert fatigue and are easily socially engineered. A compromised agent does not propose 'May I exfiltrate the database?'; it constructs plausible justifications such as 'Routine backup to Frankfurt staging server'. Human approvers cannot inspect multi-turn token lineage in real time. AEGIS enforces Theorem 1: The Provenance Dominance Invariant. If causal lineage originates from untrusted data, the gateway mathematically nullifies the human approval and denies execution.''}
+
+\subsection{Question 3: Latency Overhead \& Agentic Friction}
+\textbf{Examiner:} \textit{``What is the latency overhead of AEGIS? Does it introduce perceptible friction into agent reasoning loops?''} \\
+\textbf{Designated Respondent:} Member 4 / Member 2. \\
+\textbf{Model Answer:} \\
+\textit{``Our empirical benchmarks demonstrate a median gateway latency of only 23.29 milliseconds across 300 runs, and a mean single-scenario latency of 17.98 milliseconds. We achieve this by ordering inspection sequentially from fastest to heaviest: HMAC authentication ($< 0.1\text{ ms}$), regex heuristic and DLP scans ($< 1.8\text{ ms}$), in-process declarative policy check ($< 0.5\text{ ms}$), and optional on-device ONNX neural inference ($< 25\text{ ms}$). Compared to typical LLM API generation times of 1,000 to 3,000 milliseconds, AEGIS adds less than 1\% latency overhead.''}
+
+\subsection{Question 4: SQLite WAL Concurrency vs. Distributed DBMS}
+\textbf{Examiner:} \textit{``Why did you implement SQLite with WAL mode instead of PostgreSQL or MongoDB?''} \\
+\textbf{Designated Respondent:} Member 4. \\
+\textbf{Model Answer:} \\
+\textit{``For an edge-deployable security gateway, SQLite provides a zero-configuration, zero-daemon, serverless architecture. By configuring SQLite with Write-Ahead Logging (\texttt{PRAGMA journal\_mode = WAL}) and a 5,000ms busy timeout, we decoupled concurrent readers from append-only writers. We empirically verified 50 concurrent worker threads processing 23.3 requests per second with zero database lock errors. Furthermore, our repository pattern abstracts storage operations, allowing drop-in migration to PostgreSQL for distributed enterprise clusters by changing a single connection URI.''}
+
+\subsection{Question 5: Parameter Tampering \& TOCTOU Prevention}
+\textbf{Examiner:} \textit{``How does AEGIS prevent parameter tampering between the time an approval is granted and when the action is executed (TOCTOU)?''} \\
+\textbf{Designated Respondent:} Farhan Mallik. \\
+\textbf{Model Answer:} \\
+\textit{``We implement cryptographic payload binding in \texttt{approval\_engine.py}. When an approval request is created, \texttt{calculate\_payload\_hash} serializes the Pydantic action model with canonical alphabetical key sorting and zero whitespace, computing a deterministic SHA-256 digest. When the action is submitted with an \texttt{approval\_id}, the gateway recalculates the SHA-256 digest of the execution payload. If a single character—such as an email destination or financial transfer amount—has been modified, \texttt{hmac.compare\_digest} fails and execution is denied immediately.''}
+
+\subsection{Question 6: Multi-Agent Mesh Coordination}
+\textbf{Examiner:} \textit{``How does AEGIS handle multi-agent mesh communication where Agent A delegates a sub-task to Agent B?''} \\
+\textbf{Designated Respondent:} Farhan Mallik / Member 3. \\
+\textbf{Model Answer:} \\
+\textit{``AEGIS treats multi-agent delegation as a transitive graph propagation problem. When Agent A dispatches an intermediate prompt or parameter set to Agent B, the gateway requires that Agent A pass its verified \texttt{provenance\_context\_id}. The gateway resolves the parent lineage, merges it into Agent B's execution context, and computes the new lattice bounds via Meet ($\sqcap_I$) and Join ($\sqcup_C$). If Agent A ingested untrusted data, Agent B inherits the tainted label transitively, preventing multi-hop laundering.''}
+
+\subsection{Question 7: Handling False Positives in Threat Detection}
+\textbf{Examiner:} \textit{``What happens if the Tier 2 ONNX model falsely classifies a benign academic discussion about security as prompt injection?''} \\
+\textbf{Designated Respondent:} Member 2. \\
+\textbf{Model Answer:} \\
+\textit{``AEGIS employs defense-in-depth where threat detection scores inform risk levels without breaking data flow unilaterally for benign read tools. An elevated threat score tags the newly generated provenance node with untrusted integrity. This does not block the agent from analyzing the document; it merely prevents the agent from invoking outbound high-privilege side-effecting sinks (e.g., sending emails or modifying files) using data derived from that document. Benign operations that do not egress data continue unimpeded.''}
+
+\subsection{Question 8: Acyclicity Enforcement in Provenance Graphs}
+\textbf{Examiner:} \textit{``How does the system ensure that the provenance graph remains a Directed Acyclic Graph (DAG) during recursive reasoning loops?''} \\
+\textbf{Designated Respondent:} Member 3. \\
+\textbf{Model Answer:} \\
+\textit{``Acyclicity is enforced at two distinct layers. Structurally, the \texttt{Provenance} Pydantic schema contains an explicit validator asserting that a node's \texttt{source\_id} can never appear in its \texttt{parent\_source\_ids} tuple. Temporally, every provenance node is stamped with a monotonic, server-generated UTC timestamp, and parent nodes must strictly precede child nodes in time ($t_{\text{parent}} < t_{\text{child}}$). This temporal ordering makes cycles mathematically impossible.''}
+
+\subsection{Question 9: Direct Database Tampering Resilience}
+\textbf{Examiner:} \textit{``Can an attacker compromise security by directly editing or injecting SQL into the SQLite database?''} \\
+\textbf{Designated Respondent:} Member 4. \\
+\textbf{Model Answer:} \\
+\textit{``First, the SQLite database file resides within the gateway's isolated operating system container, inaccessible to external network callers or the agent runtime. Second, every database query across the entire codebase uses parameterized SQL queries via SQLite prepared statements, preventing SQL injection. Third, approval hashes are verified against incoming in-memory payloads using cryptographic digests, preventing forged approval records from executing without valid payloads.''}
+
+\subsection{Question 10: Horizontal Scaling in Distributed Kubernetes Clusters}
+\textbf{Examiner:} \textit{``How does AEGIS scale horizontally if traffic exceeds the limits of a single SQLite node?''} \\
+\textbf{Designated Respondent:} Member 4 / Farhan Mallik. \\
+\textbf{Model Answer:} \\
+\textit{``While local SQLite WAL mode delivers outstanding performance for edge deployments (23.3 req/s under 50 concurrent workers), AEGIS was engineered following the 12-factor application pattern. The gateway core is completely stateless. To scale horizontally across Kubernetes pods, the SQLite storage adapter is replaced with PostgreSQL or Amazon Aurora by updating the database connection string. Shared distributed caching for approval state can be backed by Redis, enabling linear horizontal scaling across dozens of gateway replicas.''}

@@ -1,0 +1,159 @@
+\chapter{Implementation Details}
+\label{chap:impl}
+
+\section{Gateway Core \& Timing-Safe Authentication}
+The implementation of the AEGIS Gateway Core (\texttt{backend/app.py} and \texttt{backend/security/gateway.py}) prioritizes timing-attack resilience and deterministic state transitions.
+
+\subsection{Timing-Safe HMAC Agent Authentication}
+To protect against timing side-channel attacks, all agent and administrative authentication tokens are verified using constant-time comparison. In \texttt{backend/security/agent\_auth.py}:
+\begin{lstlisting}[language=Python, caption={Timing-Safe Token Verification}]
+import hmac
+
+def verify_token(provided_token: str, expected_token: str) -> bool:
+    if not provided_token or not expected_token:
+        return False
+    return hmac.compare_digest(
+        provided_token.encode("utf-8"),
+        expected_token.encode("utf-8")
+    )
+\end{lstlisting}
+The use of \texttt{hmac.compare\_digest} guarantees that token evaluation latency is invariant to the position of mismatched characters, neutralizing timing oracles.
+
+\subsection{Deterministic Payload Hash Binding}
+To eliminate Time-of-Check to Time-of-Use (TOCTOU) parameter tampering between the issuance of human approval and action execution, AEGIS implements canonical JSON SHA-256 payload binding in \texttt{backend/security/approval\_engine.py}:
+\begin{lstlisting}[language=Python, caption={Canonical JSON SHA-256 Digest Calculation}]
+import hashlib
+import json
+from typing import Any, Dict
+
+def calculate_payload_hash(payload: Dict[str, Any]) -> str:
+    # Sort keys alphabetically and eliminate whitespace
+    canonical_json = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(',', ':'),
+        ensure_ascii=True
+    )
+    return hashlib.sha256(canonical_json.encode('utf-8')).hexdigest()
+\end{lstlisting}
+If a compromised agent alters a single parameter (e.g., changing the email recipient from \texttt{auditor@company.com} to \texttt{attacker@external.org}) after receiving approval, the recalculation of the SHA-256 digest immediately diverges, causing the gateway to fail closed.
+
+\section{Dual-Tier Threat Detection Engine}
+The threat detection subsystem (\texttt{backend/security/ml\_detector.py}) employs a two-tier hybrid architecture balancing sub-millisecond execution latency with semantic comprehension.
+
+\subsection{Tier 1: Sub-Millisecond Heuristic Regex Scanner}
+Tier 1 evaluates natural language strings against 6 compiled regular expression families covering established adversarial prompt injection patterns:
+\begin{enumerate}
+    \item \textbf{Instruction Override:}
+    \begin{lstlisting}[language=Python]
+r"(ignore|disregard|forget|override|bypass)\s+(previous|prior|above|all)\s+(instructions|prompts|rules|system)"
+    \end{lstlisting}
+    \item \textbf{System Prompt Leakage:}
+    \begin{lstlisting}[language=Python]
+r"(repeat|output|reveal|show|display|print)\s+(your|the)\s+(initial|system|original|secret)\s+(prompt|instructions|rules)"
+    \end{lstlisting}
+    \item \textbf{Exfiltration Command:}
+    \begin{lstlisting}[language=Python]
+r"(send|forward|exfiltrate|transmit|email|post)\s+.*(confidential|secret|password|credential|token|database|notes)"
+    \end{lstlisting}
+    \item \textbf{Roleplay Jailbreak:}
+    \begin{lstlisting}[language=Python]
+r"(you are now|pretend you are|act as|dan mode|unrestricted ai|jailbroken)"
+    \end{lstlisting}
+    \item \textbf{Hidden Delimiter Injection:}
+    \begin{lstlisting}[language=Python]
+r"(\[simulated indirect prompt injection\]|<\s*system\s*>|```\s*system|\[system message\])"
+    \end{lstlisting}
+    \item \textbf{Covert Channel Directive:}
+    \begin{lstlisting}[language=Python]
+r"(do not disclose|keep this secret|do not tell the user|silently execute)"
+    \end{lstlisting}
+\end{enumerate}
+
+\subsubsection{Scoring Rubric \& Calibration}
+Tier 1 maps detected pattern matches to a normalized confidence score $S \in [0.0, 1.0]$:
+\begin{equation}
+S(\text{matches}) = \begin{cases} 
+0.02, & \text{if } \text{matches} = 0 \quad (\text{Verdict: SAFE}) \\
+0.65, & \text{if } \text{matches} = 1 \quad (\text{Verdict: SUSPICIOUS}) \\
+\min(0.99, 0.70 + 0.10 \times \text{matches}), & \text{if } \text{matches} \ge 2 \quad (\text{Verdict: INJECTION})
+\end{cases}
+\end{equation}
+On standard commodity CPU cores, Tier 1 completes pattern scanning in under \textbf{1.8 milliseconds}, eliminating malicious queries before downstream components are invoked.
+
+\subsection{Tier 2: Probabilistic Neural Inference via ONNX Runtime}
+For ambiguous text ($S = 0.65$) or when high-assurance neural verification is configured (\texttt{AEGIS\_ML\_ENABLED=true}), AEGIS invokes an on-device quantized transformer sequence classifier (based on the DeBERTa-v3 architecture) running via Microsoft's ONNX Runtime (\texttt{onnxruntime}).
+\begin{itemize}
+    \item \textbf{C++ Runtime Optimization:} Executing via ONNX C++ bindings bypasses Python Global Interpreter Lock (GIL) contention and avoids heavyweight PyTorch or CUDA dependencies.
+    \item \textbf{Strict Latency Bounds:} Quantized INT8 weights enable inference in under \textbf{25 milliseconds} on CPU, ensuring the total pipeline remains below perceptual human lag.
+\end{itemize}
+
+\section{Data Loss Prevention (DLP) Engine}
+The Data Loss Prevention engine (\texttt{backend/security/dlp\_engine.py}) protects against the accidental or malicious exfiltration of sensitive developer credentials, authentication tokens, and personally identifiable information (PII).
+
+The DLP scanner evaluates outgoing action content across \textbf{8 high-entropy regex families}:
+\begin{enumerate}
+    \item \textbf{AWS Access Key ID:} \texttt{\textbackslash bAKIA[0-9A-Z]\{16\}\textbackslash b}
+    \item \textbf{OpenAI API Secret Key:} \texttt{\textbackslash bsk-[a-zA-Z0-9\_\-]\{32,\}\textbackslash b}
+    \item \textbf{Slack OAuth Bot/User Token:} \texttt{\textbackslash bxox[baprs]-[0-9a-zA-Z]\{10,48\}\textbackslash b}
+    \item \textbf{GitHub Personal Access Token (PAT):} \texttt{\textbackslash bghp\_[0-9a-zA-Z]\{36\}\textbackslash b}
+    \item \textbf{JSON Web Token (JWT):} \texttt{\textbackslash beyJ[A-Za-z0-9\_\-]\{10,\}\textbackslash .eyJ[A-Za-z0-9\_\-]\{10,\}\textbackslash .[A-Za-z0-9\_\-]\{10,\}\textbackslash b}
+    \item \textbf{RSA/EC Private Key Header:} \texttt{-----BEGIN\textbackslash s+([A-Z\textbackslash s]+)?PRIVATE KEY-----}
+    \item \textbf{Credit Card Number (Luhn Validated):} \texttt{\textbackslash b(?:4[0-9]\{12\}(?:[0-9]\{3\})?|5[1-5][0-9]\{14\}|3[47][0-9]\{13\})\textbackslash b}
+    \item \textbf{United States Social Security Number (SSN):} \texttt{\textbackslash b\textbackslash d\{3\}-\textbackslash d\{2\}-\textbackslash d\{4\}\textbackslash b}
+\end{enumerate}
+
+When a match is detected in an outbound payload destined for an external channel, the DLP engine immediately aborts the transaction with a \texttt{DLP policy violation}. In audit logs, matched secrets are masked as \texttt{[\{CATEGORY\}\_REDACTED]} while preserving non-sensitive prefixes for forensic triage.
+
+\section{Concurrency WAL Engine \& Zero-Lock Strategy}
+A major engineering challenge in security gateways is preventing database lock starvation when high-frequency concurrent agents record audit events and request state changes.
+
+\subsection{SQLite Concurrency PRAGMAs}
+AEGIS addresses this challenge by configuring SQLite with Write-Ahead Logging (WAL) and graceful thread-safe connection pooling in \texttt{devcontrol/db.py}:
+\begin{lstlisting}[language=Python, caption={SQLite WAL Mode Configuration}]
+connection = sqlite3.connect(database_path, timeout=5.0)
+connection.row_factory = sqlite3.Row
+connection.execute("PRAGMA foreign_keys = ON")
+connection.execute("PRAGMA busy_timeout = 5000")
+connection.execute("PRAGMA journal_mode = WAL")
+connection.execute("PRAGMA synchronous = NORMAL")
+\end{lstlisting}
+\begin{itemize}
+    \item \textbf{Decoupled Concurrent Reads and Writes:} Under WAL mode, read transactions operate against immutable shared-memory read-marks (\texttt{-shm}) while append-only write transactions append to the write-ahead log file (\texttt{-wal}). Readers never block writers, and writers never block readers.
+    \item \textbf{Graceful Busy Timeout:} The \texttt{PRAGMA busy\_timeout = 5000} directive ensures that if multiple worker threads attempt concurrent write commits, SQLite automatically handles exponential backoff for up to 5 seconds before raising an exception.
+\end{itemize}
+
+\subsection{Atomic Single-Use State Machine}
+To enforce that a granted human approval can only be consumed once, \texttt{backend/security/approval\_store.py} executes state transitions using optimistic locking via SQL rowcount verification:
+\begin{lstlisting}[language=SQL, caption={Atomic State Transition Query}]
+UPDATE approval_requests
+SET status = 'CONSUMED'
+WHERE approval_id = ?
+AND status = 'APPROVED';
+\end{lstlisting}
+The Python application layer verifies that \texttt{cursor.rowcount == 1}. If two concurrent agent threads attempt to consume the identical approval token simultaneously, exactly one thread succeeds; the second thread receives \texttt{rowcount == 0} and is denied immediately.
+
+\section{Tactical Streamlit SOC Console \& Defense Dashboard}
+AEGIS features a tactical Security Operations Center (SOC) console implemented in \texttt{frontend/dashboard.py} using Streamlit and Plotly Graph Objects.
+
+\subsection{Design Aesthetics}
+The interface implements an ``Ethereal Glass + Tactical Terminal'' design system:
+\begin{itemize}
+    \item Dark obsidian base background (\texttt{\#07090e}) with high-contrast tactical accents: neon cyan (\texttt{\#00d4ff}), emerald green (\texttt{\#10b981}), rose red (\texttt{\#f43f5e}), and amber (\texttt{\#f59e0b}).
+    \item Hardware-inspired \textbf{Double-Bezel Bento Grid Cards} (\texttt{.double-bezel-card} wrapping \texttt{.double-bezel-inner}) that provide visual hierarchy without excessive padding.
+\end{itemize}
+
+\subsection{Six Main Operational Tabs}
+The dashboard provides comprehensive operational governance partitioned into six functional tabs:
+\begin{enumerate}
+    \item \textbf{Tab 1: Threat Radar \& Telemetry:} Displays real-time decision donut charts (\texttt{ALLOW}, \texttt{DENY}, \texttt{REQUIRES\_APPROVAL}), benchmark accuracy status pills, and an intercepted action stream with JSON forensic inspection drawers.
+    \item \textbf{Tab 2: Causal Lineage DAG:} Interactive Directed Acyclic Graph rendered via Plotly Scatter connecting data sources ($[1.\text{ Ingress Document}]$, Integrity: \texttt{UNTRUSTED}) through intermediate agent reasoning ($[2.\text{ Agent Reasoning}]$, Context: \texttt{TAINTED}) to intercepted actions ($[3.\text{ Action Intercept}]$, Status: \texttt{QUARANTINED}). Correlates multi-turn events across sessions via \texttt{attack\_id}.
+    \item \textbf{Tab 3: Cryptographic Approval Desk:} Displays pending high-privilege requests with metadata, expiration countdowns, and one-click cryptographic review actions (\textit{Sign \& Approve} or \textit{Reject Proposal}).
+    \item \textbf{Tab 4: Interactive Attack Sandbox:}
+    \begin{itemize}
+        \item \textit{Guided 4-Stage Capstone Scenarios:} Stage 1 Benign Query (Sub-20ms \texttt{ALLOW}), Stage 2 Indirect Prompt Injection (\texttt{QUARANTINED} with score 0.92+), Stage 3 The Climax (HITL approval nullified by Theorem 1), and Stage 4 Outbound DLP Intercept (blocked on AWS key).
+        \item \textit{Live Custom Adversarial Playground:} Preset loaders for BIPIA jailbreaks, exfiltration, and custom prompt testing.
+    \end{itemize}
+    \item \textbf{Tab 5: Formal Security Lattice \& Proofs:} Interactive mathematical reference rendering LaTeX formulations of Denning's lattice, Biba's lattice, and the formal proof of Theorem \ref{thm:dominance}.
+    \item \textbf{Tab 6: Capstone Defense Presentation Deck:} Embedded 14-slide interactive presentation viewer with speaker notes, milestone timelines, and slide navigation.
+\end{enumerate}

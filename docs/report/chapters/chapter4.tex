@@ -1,0 +1,296 @@
+\chapter{Mathematical Security Formulation}
+\label{chap:math}
+
+\section{Dual-Lattice Information Flow Control Model}
+To provide provable, deterministic security bounds for autonomous agent execution, AEGIS formalizes Information Flow Control (IFC) via a dual-lattice algebraic structure. The system simultaneously tracks two orthogonal security dimensions:
+\begin{enumerate}
+    \item \textbf{Confidentiality ($\mathcal{L}_{\text{conf}}$):} Restricting the dissemination of private or secret data to unauthorized destinations (governed by Dorothy Denning's 1976 model \cite{denning1976lattice}).
+    \item \textbf{Integrity ($\mathcal{L}_{\text{integ}}$):} Restricting untrusted, tainted, or adversarial data from corrupting high-privilege system actions (governed by Kenneth Biba's 1977 model \cite{biba1977integrity}).
+\end{enumerate}
+
+\subsection{The Confidentiality Lattice ($\mathcal{L}_{\text{conf}}$)}
+\begin{definition}[Confidentiality Lattice]
+The confidentiality lattice is defined as a 6-tuple:
+\begin{equation}
+\mathcal{L}_{\text{conf}} = (S_{\text{conf}}, \sqsubseteq_C, \sqcup_C, \sqcap_C, \bot_C, \top_C)
+\end{equation}
+where $S_{\text{conf}}$ is a totally ordered set of security sensitivity levels:
+\begin{equation}
+S_{\text{conf}} = \{\text{PUBLIC}, \text{INTERNAL}, \text{CONFIDENTIAL}, \text{RESTRICTED}\}
+\end{equation}
+ordered by the strict partial order $\sqsubset_C$:
+\begin{equation}
+\text{PUBLIC} \sqsubset_C \text{INTERNAL} \sqsubset_C \text{CONFIDENTIAL} \sqsubset_C \text{RESTRICTED}
+\end{equation}
+with universal lower bound $\bot_C = \text{PUBLIC}$ and universal upper bound $\top_C = \text{RESTRICTED}$.
+\end{definition}
+
+The algebraic operators governing confidentiality are defined as:
+\begin{itemize}
+    \item \textbf{Least Upper Bound (LUB) Join ($\sqcup_C$):} Represents the combined sensitivity of merged information:
+    \begin{equation}
+    \text{label}(A \cup B) = \text{label}(A) \sqcup_C \text{label}(B) = \max_{\sqsubseteq_C}(\text{label}(A), \text{label}(B))
+    \end{equation}
+    \item \textbf{Greatest Lower Bound (GLB) Meet ($\sqcap_C$):}
+    \begin{equation}
+    \text{label}(A \cap B) = \text{label}(A) \sqcap_C \text{label}(B) = \min_{\sqsubseteq_C}(\text{label}(A), \text{label}(B))
+    \end{equation}
+\end{itemize}
+
+\begin{axiom}[Permissible Confidentiality Flow]
+Information labeled $L_{\text{src}} \in S_{\text{conf}}$ is permitted to flow to sink destination $L_{\text{dst}} \in S_{\text{conf}}$ if and only if:
+\begin{equation}
+L_{\text{src}} \sqsubseteq_C L_{\text{dst}}
+\end{equation}
+A flow is strictly prohibited if $L_{\text{src}} \not\sqsubseteq_C L_{\text{dst}}$, preventing confidential data from leaking to lower-clearance destinations.
+\end{axiom}
+
+\subsection{The Integrity Lattice ($\mathcal{L}_{\text{integ}}$)}
+\begin{definition}[Integrity Lattice]
+The integrity lattice is defined as a 6-tuple:
+\begin{equation}
+\mathcal{L}_{\text{integ}} = (S_{\text{integ}}, \sqsubseteq_I, \sqcup_I, \sqcap_I, \bot_I, \top_I)
+\end{equation}
+where $S_{\text{integ}}$ is a totally ordered set of trustworthiness and verification levels:
+\begin{equation}
+S_{\text{integ}} = \{\text{UNTRUSTED}, \text{REVIEWED}, \text{TRUSTED}\}
+\end{equation}
+ordered by the strict partial order $\sqsubset_I$:
+\begin{equation}
+\text{UNTRUSTED} \sqsubset_I \text{REVIEWED} \sqsubset_I \text{TRUSTED}
+\end{equation}
+with universal lower bound $\bot_I = \text{UNTRUSTED}$ and universal upper bound $\top_I = \text{TRUSTED}$.
+\end{definition}
+
+The algebraic operators governing integrity are defined as:
+\begin{itemize}
+    \item \textbf{Greatest Lower Bound (GLB) Meet ($\sqcap_I$):} Represents the Biba Contamination Principle. When information from multiple sources is combined during reasoning, the integrity of the resulting state is bounded by its weakest component:
+    \begin{equation}
+    \text{integrity}(A \cup B) = \text{integrity}(A) \sqcap_I \text{integrity}(B) = \min_{\sqsubseteq_I}(\text{integrity}(A), \text{integrity}(B))
+    \end{equation}
+    \item \textbf{Least Upper Bound (LUB) Join ($\sqcup_I$):}
+    \begin{equation}
+    \text{integrity}(A) \sqcup_I \text{integrity}(B) = \max_{\sqsubseteq_I}(\text{integrity}(A), \text{integrity}(B))
+    \end{equation}
+\end{itemize}
+
+\begin{axiom}[Biba Strict Integrity Axioms]
+In accordance with Biba's formulation \cite{biba1977integrity}:
+\begin{enumerate}
+    \item \textbf{Simple Integrity Property (No Read Down):} A subject $s$ with integrity $I(s)$ can read object $o$ with integrity $I(o)$ without contamination if and only if $I(o) \sqsupseteq_I I(s)$. If $I(o) \sqsubset_I I(s)$, the subject's internal state integrity instantly degrades to $I(s)' = I(s) \sqcap_I I(o) = I(o)$.
+    \item \textbf{Integrity Star Property (No Write Up):} A subject $s$ may write to object or invoke tool $o$ with required integrity $I_{\text{req}}(o)$ if and only if:
+    \begin{equation}
+    I(s) \sqsupseteq_I I_{\text{req}}(o)
+    \end{equation}
+\end{enumerate}
+\end{axiom}
+
+\section{Causal Provenance Directed Acyclic Graph (DAG)}
+To track information flows across multi-turn autonomous agent reasoning traces, AEGIS constructs an immutable, server-enforced causal provenance graph.
+
+\begin{definition}[Execution Lineage DAG]
+An execution history is modeled as a Directed Acyclic Graph:
+\begin{equation}
+G = (V, E)
+\end{equation}
+where $V$ is the set of provenance nodes and $E \subseteq V \times V$ represents directed causal dependency edges. Each node $v \in V$ is an immutable record:
+\begin{equation}
+v = (\text{id}(v), \text{type}(v), \text{origin}(v), C(v), I(v), \tau(v), \text{parents}(v), t_{\text{utc}}(v))
+\end{equation}
+where:
+\begin{itemize}
+    \item $\text{id}(v) \in \mathcal{U}$ is a universally unique identifier (UUIDv4) generated by the gateway.
+    \item $\text{type}(v) \in \{\text{USER\_INPUT}, \text{DOCUMENT}, \text{TOOL\_OUTPUT}, \text{AGENT\_GENERATED}, \text{EXTERNAL}\}$.
+    \item $C(v) \in S_{\text{conf}}$ is the confidentiality label.
+    \item $I(v) \in S_{\text{integ}}$ is the integrity level.
+    \item $\tau(v) \in \{\text{True}, \text{False}\}$ is a boolean taint flag denoting whether the node contains unverified or untrusted natural language instructions.
+    \item $\text{parents}(v) = (p_1, \dots, p_k) \in V^k$ defines the set of immediate causal precursors ($k \le 50$), with the structural invariant that $\text{id}(v) \notin \text{parents}(v)$ ensuring acyclicity.
+    \item $t_{\text{utc}}(v)$ is the monotonic server timestamp.
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Transitive Ancestor Set]
+For any node $v \in V$, the transitive causal ancestor set $V_v^*$ is defined recursively as:
+\begin{equation}
+V_v^* = \{u \in V \mid u \rightsquigarrow v\} = \text{parents}(v) \cup \bigcup_{p \in \text{parents}(v)} V_p^*
+\end{equation}
+where $u \rightsquigarrow v$ denotes the existence of a directed path from $u$ to $v$ in $G$.
+\end{definition}
+
+\subsection{Lattice Propagation Equations}
+When an agent synthesizes a new derived artifact or action proposal $v$ from a set of input parent nodes $P = \{p_1, p_2, \dots, p_k\}$, the gateway computes the derived lattice labels via recursive propagation:
+\begin{align}
+C(v) &= \bigsqcup_{p \in P} C(p) = \max_{\sqsubseteq_C} \{C(p_1), \dots, C(p_k)\} \label{eq:join_conf} \\
+I(v) &= \bigsqcap_{p \in P} I(p) = \min_{\sqsubseteq_I} \{I(p_1), \dots, I(p_k)\} \label{eq:meet_integ} \\
+\tau(v) &= \bigvee_{p \in P} \tau(p) = \tau(p_1) \lor \tau(p_2) \lor \dots \lor \tau(p_k) \label{eq:taint_or}
+\end{align}
+
+Equations (\ref{eq:join_conf})--(\ref{eq:taint_or}) guarantee that sensitivity accumulates upwards, integrity degrades downwards, and taint spreads irreversibly across the causal lineage.
+
+\section{Theorem 1: Provenance Dominance Invariant}
+We now present the foundational mathematical contribution of this work: \textbf{Theorem 1 (Provenance Dominance Invariant)}.
+
+\begin{theorem}[Provenance Dominance Invariant]
+\label{thm:dominance}
+Let $a = (id, t, r, \mathbf{p})$ be an action request submitted by an autonomous agent directed at a sink destination $r$ with required confidentiality clearance $C_{\text{sink}}(r)$ and required execution integrity $I_{\text{req}}(t)$. Let $V_a^* = \{v \in V \mid v \rightsquigarrow a\}$ denote the complete set of causal provenance ancestors influencing $a$.
+
+Define the cumulative provenance metrics of $a$ as:
+\begin{align}
+C_{\text{prov}}(a) &= \bigsqcup_{v \in V_a^*} C(v) \\
+I_{\text{prov}}(a) &= \bigsqcap_{v \in V_a^*} I(v) \\
+\tau_{\text{prov}}(a) &= \bigvee_{v \in V_a^*} \tau(v)
+\end{align}
+
+The action $a$ is mathematically permissible for tool execution if and only if:
+\begin{equation}
+\label{eq:theorem1}
+\text{permit}(a) \iff \left( C_{\text{prov}}(a) \sqsubseteq_C C_{\text{sink}}(r) \right) \land \left( I_{\text{prov}}(a) \sqsupseteq_I I_{\text{req}}(t) \right) \land \left( \neg \tau_{\text{prov}}(a) \right)
+\end{equation}
+\end{theorem}
+
+\begin{corollary}[Human Approval Nullification Corollary]
+\label{cor:nullification}
+Let $\tau_{\text{HITL}}$ be a valid, unexpired, cryptographically signed human approval token associated with action proposal $a$. If:
+\begin{equation}
+I_{\text{prov}}(a) \sqsubset_I I_{\text{req}}(t) \quad \lor \quad \tau_{\text{prov}}(a) = \text{True}
+\end{equation}
+then the human approval token $\tau_{\text{HITL}}$ is mathematically null and void:
+\begin{equation}
+\text{permit}(a \mid \tau_{\text{HITL}}) = \text{False}
+\end{equation}
+Under no condition may human authorization override untrusted data taint.
+\end{corollary}
+
+\section{Inductive Proof of Theorem 1}
+To prove Theorem \ref{thm:dominance} and Corollary \ref{cor:nullification}, we first establish three foundational supporting lemmas.
+
+\begin{lemma}[Taint Monotonicity]
+\label{lem:taint_monotonicity}
+For any node $v \in V$ in execution DAG $G = (V, E)$, if there exists an ancestor $u \in V_v^*$ such that $\tau(u) = \text{True}$, then $\tau(v) = \text{True}$.
+\end{lemma}
+
+\begin{proof}
+We proceed by mathematical induction on the maximum path length $k = \text{dist}(u, v)$ from $u$ to $v$ in $G$.
+
+\textbf{Base Case ($k = 1$):} \\
+Suppose $\text{dist}(u, v) = 1$. Then $u \in \text{parents}(v)$. By Equation (\ref{eq:taint_or}), the taint of $v$ is computed as:
+\begin{equation}
+\tau(v) = \bigvee_{p \in \text{parents}(v)} \tau(p) = \tau(u) \lor \left(\bigvee_{p \in \text{parents}(v) \setminus \{u\}} \tau(p)\right)
+\end{equation}
+Since $\tau(u) = \text{True}$, by Boolean algebra:
+\begin{equation}
+\tau(v) = \text{True} \lor X = \text{True}
+\end{equation}
+Thus, the base case holds.
+
+\textbf{Inductive Hypothesis:} \\
+Assume that for all nodes $w \in V$ such that $\text{dist}(u, w) = m$ (where $1 \le m \le k$), if $\tau(u) = \text{True}$, then $\tau(w) = \text{True}$.
+
+\textbf{Inductive Step ($k + 1$):} \\
+Consider a node $v$ such that $\text{dist}(u, v) = k + 1$. By definition of paths in a DAG, there must exist a node $w \in \text{parents}(v)$ such that $\text{dist}(u, w) = k$. 
+
+By the inductive hypothesis, since $\text{dist}(u, w) = k$, we have $\tau(w) = \text{True}$. 
+
+Since $w \in \text{parents}(v)$, applying Equation (\ref{eq:taint_or}) to node $v$:
+\begin{equation}
+\tau(v) = \tau(w) \lor \left(\bigvee_{p \in \text{parents}(v) \setminus \{w\}} \tau(p)\right) = \text{True} \lor Y = \text{True}
+\end{equation}
+By mathematical induction, $\tau(v) = \text{True}$ for all paths of arbitrary length $k \ge 1$. Hence, taint is strictly monotonic.
+\end{proof}
+
+\begin{lemma}[Integrity Anti-Monotonicity]
+\label{lem:integ_anti}
+For any node $v \in V$ and any ancestor $u \in V_v^*$ in execution DAG $G$, the integrity level satisfies:
+\begin{equation}
+I(v) \sqsubseteq_I I(u)
+\end{equation}
+Furthermore, if $\exists u \in V_v^*$ such that $I(u) = \bot_I = \text{UNTRUSTED}$, then $I(v) = \text{UNTRUSTED}$.
+\end{lemma}
+
+\begin{proof}
+We proceed by induction on path length $k = \text{dist}(u, v)$.
+
+\textbf{Base Case ($k = 1$):} \\
+If $\text{dist}(u, v) = 1$, then $u \in \text{parents}(v)$. By Equation (\ref{eq:meet_integ}):
+\begin{equation}
+I(v) = \bigsqcap_{p \in \text{parents}(v)} I(p) = I(u) \sqcap_I \left(\bigsqcap_{p \in \text{parents}(v) \setminus \{u\}} I(p)\right)
+\end{equation}
+By definition of the greatest lower bound in a lattice:
+\begin{equation}
+\forall x, y \in S_{\text{integ}}, \quad (x \sqcap_I y) \sqsubseteq_I x \quad \text{and} \quad (x \sqcap_I y) \sqsubseteq_I y
+\end{equation}
+Therefore:
+\begin{equation}
+I(v) \sqsubseteq_I I(u)
+\end{equation}
+If $I(u) = \bot_I$, then because $\bot_I$ is the universal bottom element of $S_{\text{integ}}$:
+\begin{equation}
+I(v) = \bot_I \sqcap_I Z = \bot_I = \text{UNTRUSTED}
+\end{equation}
+The base case holds.
+
+\textbf{Inductive Hypothesis:} \\
+Assume that for all $w$ such that $\text{dist}(u, w) = m \le k$, $I(w) \sqsubseteq_I I(u)$.
+
+\textbf{Inductive Step ($k + 1$):} \\
+Let $\text{dist}(u, v) = k + 1$. There exists $w \in \text{parents}(v)$ with $\text{dist}(u, w) = k$. By the inductive hypothesis, $I(w) \sqsubseteq_I I(u)$. Applying the base case to the edge $(w, v)$, we have $I(v) \sqsubseteq_I I(w)$.
+
+By transitivity of the partial order relation $\sqsubseteq_I$:
+\begin{equation}
+I(v) \sqsubseteq_I I(w) \land I(w) \sqsubseteq_I I(u) \implies I(v) \sqsubseteq_I I(u)
+\end{equation}
+If $I(u) = \bot_I$, then $I(w) = \bot_I$, which implies $I(v) = \bot_I = \text{UNTRUSTED}$. 
+
+Thus, integrity degrades anti-monotonically along all causal paths.
+\end{proof}
+
+\begin{lemma}[Non-Interference Guarantee]
+\label{lem:non_interference}
+Let $A_{\text{priv}}$ denote the set of high-privilege actions requiring integrity clearance $I_{\text{req}} \ge \text{REVIEWED}$. If an execution trace satisfies Equation (\ref{eq:theorem1}) at every step, then no low-integrity or tainted input $x_{\text{untrusted}}$ can cause the execution of any action $a \in A_{\text{priv}}$.
+\end{lemma}
+
+\begin{proof}
+Let $u \in V$ be the provenance node representing the ingestion of $x_{\text{untrusted}}$. By definition of unverified external inputs:
+\begin{equation}
+I(u) = \text{UNTRUSTED} = \bot_I \quad \text{and} \quad \tau(u) = \text{True}
+\end{equation}
+Suppose, for the sake of contradiction, that $x_{\text{untrusted}}$ exerts causal influence on an action $a \in A_{\text{priv}}$. 
+
+By definition of causal influence in an execution DAG, there must exist a directed path from $u$ to $a$ in $G$, meaning $u \in V_a^*$.
+
+Applying Lemma \ref{lem:taint_monotonicity} to $u \in V_a^*$:
+\begin{equation}
+\tau(u) = \text{True} \implies \tau_{\text{prov}}(a) = \text{True}
+\end{equation}
+Applying Lemma \ref{lem:integ_anti} to $u \in V_a^*$:
+\begin{equation}
+I(u) = \text{UNTRUSTED} \implies I_{\text{prov}}(a) = \text{UNTRUSTED}
+\end{equation}
+Now, evaluate the policy gate condition $\text{permit}(a)$ from Equation (\ref{eq:theorem1}):
+\begin{align}
+\text{permit}(a) &= (C_{\text{prov}}(a) \sqsubseteq_C C_{\text{sink}}) \land (I_{\text{prov}}(a) \sqsupseteq_I I_{\text{req}}(a)) \land (\neg \tau_{\text{prov}}(a)) \\
+&= (C_{\text{prov}}(a) \sqsubseteq_C C_{\text{sink}}) \land (\text{UNTRUSTED} \sqsupseteq_I \text{REVIEWED}) \land (\neg \text{True}) \\
+&= (C_{\text{prov}}(a) \sqsubseteq_C C_{\text{sink}}) \land \text{False} \land \text{False} \\
+&= \text{False}
+\end{align}
+The gateway evaluates $\text{permit}(a) = \text{False}$ and strictly denies execution. This contradicts the assumption that $a$ was executed. Hence, non-interference is preserved.
+\end{proof}
+
+\subsection{Final Synthesis Proof of Theorem 1 and Corollary 1}
+\begin{proof}[Proof of Theorem \ref{thm:dominance} and Corollary \ref{cor:nullification}]
+The necessity and sufficiency of Equation (\ref{eq:theorem1}) follows directly from the conjunction of Denning's information flow theorem, Biba's strict integrity theorem, and Lemmas \ref{lem:taint_monotonicity}--\ref{lem:non_interference}.
+
+To prove Corollary \ref{cor:nullification}, consider an action $a$ where $u \in V_a^*$ with $I(u) = \text{UNTRUSTED}$ or $\tau(u) = \text{True}$. 
+
+In the AEGIS Policy Enforcement Point (PEP) architecture (detailed in Chapter \ref{chap:arch}), the policy evaluation function is ordered as a strict sequence:
+\begin{equation}
+\Phi(a) = \text{Step}_4(\text{IFC\_Evaluate}(a)) \circ \text{Step}_5(\text{HITL\_Consume}(a))
+\end{equation}
+At Step 4, the gateway evaluates $\text{permit}(a)$ via Equation (\ref{eq:theorem1}). If $\tau_{\text{prov}}(a) = \text{True}$ or $I_{\text{prov}}(a) \sqsubset_I I_{\text{req}}(a)$, Step 4 immediately halts execution and emits a terminal \texttt{DENY} decision. 
+
+Because execution terminates at Step 4, control flow never reaches Step 5. Consequently, any human approval token $\tau_{\text{HITL}}$ associated with $a$ is never evaluated or consumed:
+\begin{equation}
+\text{permit}(a \mid \tau_{\text{HITL}}) \equiv \text{DENY}
+\end{equation}
+Therefore, human authorization is subordinate to provenance taint, and the invariant holds unconditionally.
+\end{proof}

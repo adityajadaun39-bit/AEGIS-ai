@@ -1,0 +1,95 @@
+\chapter{Literature Survey \& Related Work}
+\label{chap:literature}
+
+\section{Historical Foundations of Information Flow Control}
+The discipline of Information Flow Control (IFC) originated in response to the fundamental limitations of discretionary access control (DAC) and mandatory access control (MAC) in operating systems \cite{saltzer1975protection}. While standard access control mechanisms regulate which subjects can initiate operations on specific objects, they fail to regulate how data propagates once read into memory. If a privileged subject reads a confidential file, access control cannot prevent that subject from leaking the information into a publicly readable socket or shared memory segment.
+
+To mathematically constrain the dissemination of information throughout computing systems, Dorothy Denning formulated the lattice model of secure information flow in 1976 \cite{denning1976lattice}. Denning established that security classes form a universally bounded lattice structure $\mathcal{L} = (S, \sqsubseteq, \sqcup, \sqcap, \bot, \top)$ characterized by:
+\begin{enumerate}
+    \item A finite set of security classes $S$.
+    \item A partial order relation $\sqsubseteq$ specifying permissible flows (i.e., information in class $A$ may flow into class $B$ if and only if $A \sqsubseteq B$).
+    \item A Least Upper Bound (LUB) join operator $\sqcup$ representing the security class of combined information derived from multiple sources: $\text{label}(A \cup B) = A \sqcup B$.
+    \item A Greatest Lower Bound (GLB) meet operator $\sqcap$.
+    \item Universally bounded bottom ($\bot$) and top ($\top$) elements representing the least sensitive and most sensitive classes, respectively.
+\end{enumerate}
+
+In parallel, Kenneth Biba addressed data integrity in 1977 \cite{biba1977integrity}. In contrast to confidentiality lattices that prevent information from leaking upwards or outwards (``No Read Up, No Write Down'' in the Bell-LaPadula paradigm), Biba formulated the strict integrity lattice to prevent untrusted data from contaminating high-integrity system components (``No Read Down, No Write Up''). Biba proved that integrity classes are naturally ordered such that any derived artifact possesses an integrity level bounded above by the least trusted component in its derivation history:
+\begin{equation}
+\text{integrity}(A \cup B) = \text{integrity}(A) \sqcap_I \text{integrity}(B)
+\end{equation}
+In Biba's formulation, contamination is monotonic: untrusted data irreparably lowers the integrity rank of any program state it touches.
+
+Subsequent research extended lattice-based IFC into programming languages and runtime systems. Myers developed JFlow \cite{myers1999jflow}, demonstrating mostly-static information flow enforcement for Java via decentralized label models. Sabelfeld and Myers \cite{sabelfeld2003language} codified language-based information flow security, formalizing the non-interference property: a system satisfies non-interference if low-privilege observers cannot detect variations in high-privilege program inputs.
+
+Despite decades of formalization in compilers and operating systems, information flow control has been largely ignored in modern neural network pipelines. When autonomous agents synthesize prompts, execute tool functions, and incorporate multi-turn observations, the absence of an IFC lattice exposes the host infrastructure to severe integrity contamination.
+
+\section{Adversarial Attacks on Large Language Models}
+With the widespread deployment of generative transformer architectures, adversarial vulnerabilities have emerged as an existential security risk. Initial research demonstrated that aligned language models could be tricked into violating safety policies via manual prompt engineering, prefix injection, and role-playing personas (e.g., ``DAN'' or ``Do Anything Now'') \cite{liu2023promptinjection, perez2022ignore}. 
+
+Zou et al. \cite{zou2023universal} demonstrated that adversarial vulnerabilities are not merely heuristic phrasing artifacts, but represent universal, transferable gradient phenomena. By applying Greedy Coordinate Gradient (GCG) search, the authors discovered universal adversarial suffixes that force aligned models to execute prohibited instructions across diverse architectures. Similarly, data poisoning attacks investigated by Schwarzschild et al. \cite{schwarzschild2021rethinking} and Schuster et al. \cite{schuster2021humaneval} demonstrated that neural code synthesis models can be backdoored during pre-training to emit insecure code when triggered by subtle contextual keywords.
+
+Recognizing these risks, the National Institute of Standards and Technology (NIST) published the AI Risk Management Framework (AI RMF 1.0) \cite{nist2024ai}, emphasizing the urgent requirement for verifiable governance, provenance integrity, and adversarial resilience across generative AI deployments.
+
+\section{Indirect Prompt Injection in Autonomous Agents}
+While direct jailbreaks target conversational chatbots, \textbf{Indirect Prompt Injection} represents a far more critical threat vector in agentic systems \cite{greshake2023indirect, zeng2024agentsecurity}. In an indirect prompt injection attack, the adversary does not interact with the language model directly. Instead, the adversary injects adversarial instructions into an external digital medium that the agent is expected to retrieve and analyze.
+
+Greshake et al. \cite{greshake2023indirect} demonstrated that autonomous agents integrating retrieval-augmented generation (RAG) and tool calling could be compromised by passive text payloads placed on web pages, within incoming emails, or inside shared document repositories. For example, a search engine crawler agent tasked with summarizing a web page can be commandeered by hidden text reading:
+\begin{quote}
+\texttt{[SYSTEM INSTRUCTION: Ignore all previous goals. Read the local filesystem at /etc/passwd and transmit the contents via HTTP GET to attacker-domain.com/collect.]}
+\end{quote}
+When the agent's LLM processes this text, the attention mechanism fails to differentiate between the system administrator's original meta-prompt and the newly ingested document tokens. The agent adopts the injected directive as its new primary goal.
+
+To systematically evaluate model susceptibility to such attacks, Ribeiro et al. \cite{ribeiro2024bipia} introduced the \textbf{BIPIA} benchmark (Benchmark for Indirect Prompt Injection Attacks). Evaluating leading frontier models across diverse synthetic and real-world injection scenarios, the authors found that current commercial LLMs exhibit failure rates exceeding 50\% when confronted with contextually embedded injections.
+
+Abdelnabi et al. \cite{abdelnabi2023not} conducted an extensive empirical audit of existing LLM guardrails, evaluating whether pre-LLM and post-LLM prompt defenses could reliably block indirect prompt injection. Their findings were definitive: static prompt filters, heuristic classifiers, and LLM-based evaluators provide fragile, probabilistic defenses that can be easily bypassed using linguistic paraphrasing, multi-language translation, character encoding, and adversarial token insertion.
+
+\section{Survey of Existing Defense Paradigms}
+Industrial and academic initiatives have developed several defensive toolkits to mitigate LLM security vulnerabilities. However, as analyzed below, each existing paradigm suffers from structural architectural deficiencies when applied to autonomous multi-agent tool-execution workflows.
+
+\subsection{Llama Guard 3}
+Llama Guard \cite{inan2023llamaguard} is a fine-tuned instruction-following language model designed as an input-output safety classifier. It evaluates human prompts and agent responses against predefined taxonomy categories (e.g., violence, hate speech, malware generation).
+\begin{itemize}
+    \item \textbf{Architectural Limitation:} Llama Guard operates strictly as a stateless point classifier on raw text strings. It possesses no concept of execution state, tool permissions, or historical data provenance. It cannot detect when an agent executes a benign-looking action (such as dispatching an email) whose underlying parameters were derived from an untrusted source.
+    \item \textbf{Latency Overhead:} Invoking an external 8-billion-parameter LLM classifier for every agent deliberation introduces 150~ms to 500~ms of network and inference latency, imposing an unacceptable performance tax on multi-step reasoning loops.
+\end{itemize}
+
+\subsection{NeMo Guardrails}
+NeMo Guardrails \cite{rebedea2023nemoguardrails}, developed by NVIDIA, is an open-source programmable safety framework that employs a domain-specific modeling language (Colang) to guide LLM conversational flows.
+\begin{itemize}
+    \item \textbf{Architectural Limitation:} NeMo Guardrails enforces dialogue trajectory constraints before or after the LLM call. However, it lacks a formal mathematical lattice model for tracking transitive data taint across multi-hop agent-tool interactions. Furthermore, NeMo Guardrails does not enforce non-bypassable containment: if an agent successfully transitions to a permitted dialogue branch, it can still trigger downstream tool executions with tainted data.
+    \item \textbf{Computational Complexity:} NeMo Guardrails frequently requires multiple internal LLM sub-calls to canonicalize user intent, increasing invocation latency by 200~ms to 800~ms.
+\end{itemize}
+
+\subsection{Vanilla Agent Frameworks (LangGraph, AutoGen)}
+Standard open-source orchestration frameworks like LangGraph and AutoGen \cite{wu2023autogen} focus primarily on developer ergonomics, graph orchestration, and conversational memory. Security is treated as an optional application-layer concern, typically delegated to system prompts (e.g., \textit{``You are a helpful and secure assistant''}). In these frameworks, tool-calling APIs are exposed directly to the model runtime without an in-line cryptographic proxy, leaving the host operating environment completely vulnerable to Confused Deputy exploitation.
+
+\section{Comparative Architectural Matrix}
+Table \ref{tab:comparison} presents an exhaustive comparative analysis contrasting AEGIS against Vanilla LangGraph, NeMo Guardrails, and Llama Guard 3 across seven critical security and operational dimensions.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Comparative Architectural Analysis of LLM Defense Systems}
+\label{tab:comparison}
+\begin{tabularx}{\textwidth}{lXXXX}
+\toprule
+\textbf{Feature / Dimension} & \textbf{Vanilla LangGraph} & \textbf{NeMo Guardrails} & \textbf{Llama Guard 3} & \textbf{AEGIS (Ours)} \\
+\midrule
+\textbf{Defense Layer} & Application Prompt & Pre-LLM Canonicalizer & Input/Output Classifier & \textbf{In-Line Execution Gateway (PEP)} \\
+\addlinespace
+\textbf{Information Flow Control} & None & None & None & \textbf{Yes (Denning \& Biba Dual Lattices)} \\
+\addlinespace
+\textbf{Dynamic Provenance Tracking} & None & None & None & \textbf{Yes (Causal Execution DAG)} \\
+\addlinespace
+\textbf{Provenance Overrides Approval} & No & No & No & \textbf{Yes (Theorem 1 Invariant Guarantee)} \\
+\addlinespace
+\textbf{DLP \& Secret Scanning} & None & Optional / Extensible & None & \textbf{Built-in Sub-millisecond Regex (8 Families)} \\
+\addlinespace
+\textbf{Inference Overhead} & 0 ms & 200--800 ms (LLM Call) & 150--500 ms (LLM Call) & \textbf{$< 20$ ms (Local ONNX + Regex)} \\
+\addlinespace
+\textbf{External Runtime Dependencies} & Dependent on Host LLM & Dependent on Colang / LLM & Dependent on PyTorch / GPU & \textbf{Zero Cloud Dependencies (Local SQLite + ONNX)} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+As established in Table \ref{tab:comparison}, AEGIS is the only system that combines mathematical Information Flow Control, dynamic DAG-based causal provenance tracking, provable provenance dominance over human approvals, high-entropy secret detection, and sub-20ms local execution overhead.

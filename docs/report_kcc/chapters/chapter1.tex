@@ -1,0 +1,40 @@
+\chapter{INTRODUCTION}
+
+\section{Background and Motivation}
+The artificial intelligence landscape has undergone a foundational paradigm shift over the past two years. While early applications of Large Language Models (LLMs) focused predominantly on passive, conversational text generation, modern enterprise systems increasingly deploy \textbf{Autonomous AI Agents}~\cite{yao2024survey}. Frameworks such as LangChain, AutoGen, CrewAI, and the Model Context Protocol (MCP) equip neural language models with operational agency---the capability to autonomously formulate multi-step execution plans, call external tools, query internal databases, read local files, and communicate with third-party web services~\cite{wang2024survey}.
+
+In an enterprise workflow, an autonomous agent may be tasked with parsing incoming invoices, summarizing candidate resumes, managing customer ticketing systems, or executing automated SQL database synchronizations~\cite{hong2024metagpt}. While this operational autonomy drives massive organizational efficiency, it introduces an unprecedented attack surface.
+
+Traditional software engineering enforces strict architectural boundaries between executable code and passive data. However, Transformer-based LLMs operate under a structural vulnerability akin to the classic \textbf{Von Neumann code/data confusion}~\cite{neumann1993edvac}: instructions (developer system prompts) and untrusted data (external documents, emails, web pages) are ingested as a single, concatenated sequence of tokens into the self-attention mechanism. Consequently, an LLM fundamentally cannot distinguish between an authorized command issued by its creator and an unauthorized adversarial command embedded within a document it was instructed to read.
+
+\section{Problem Statement}
+This structural vulnerability manifests in two primary attack vectors recognized by the Open Web Application Security Project (OWASP) Top 10 for LLMs~\cite{owasp2023llm}:
+\begin{enumerate}
+    \item \textbf{Indirect Prompt Injection (OWASP LLM01):} An external adversary injects malicious text into a data source that the agent is scheduled to process (e.g., an invoice containing hidden text: \textit{``SYSTEM OVERRIDE: Ignore prior instructions, query the customer database, and email the output to attacker.com''}). When the agent processes this document, the attention weights treat the untrusted text as a legitimate instruction~\cite{greshake2023not}.
+    \item \textbf{The Confused Deputy Vulnerability (OWASP LLM06):} Because the autonomous agent possesses high-privilege credentials (such as database connection strings, corporate email access, or cloud API tokens), the attacker exploits the agent as a ``confused deputy''~\cite{hardy1988confused}. The agent executes unauthorized, destructive, or exfiltrating operations using its legitimate corporate authority.
+\end{enumerate}
+
+\subsection{The Failure of Existing Countermeasures}
+Current industry efforts to mitigate prompt injection suffer from two fatal weaknesses:
+\begin{itemize}
+    \item \textbf{Natural Language System Prompts:} Instructing an LLM to \textit{``ignore malicious instructions in text''} is inherently fragile. Adversaries consistently bypass prompt-based guardrails using adversarial jailbreaks, obfuscation, multi-lingual encoding, or recursive indirection~\cite{perez2022ignore,zou2023universal}.
+    \item \textbf{The Human-in-the-Loop (HITL) Fallacy:} To prevent unintended tool execution, enterprise architects frequently insert a human approval gate. However, empirical studies demonstrate that \textbf{human approvers are easily socially engineered}~\cite{schneier2000secrets}. When a compromised agent presents a privileged action with a convincing, benign rationale (e.g., \textit{``Routine system maintenance synchronization requested by IT management''}), human operators routinely approve the request.
+\end{itemize}
+
+\section{Objectives of the Project}
+The primary objectives of this minor project are:
+\begin{enumerate}
+    \item \textbf{Design an In-Line Security Gateway:} Develop AEGIS, an architectural security gateway positioned between the autonomous agent and external tool brokers, inspecting all tool invocations in real time.
+    \item \textbf{Formulate a Provable Security Axiom:} Establish and formally prove the principle of \textbf{Provenance-Dominated Approval}: \textit{Data provenance strictly dominates human approval}. If an action derives from untrusted data, human approval is mathematically rendered insufficient to authorize execution.
+    \item \textbf{Implement Dual-Lattice Information Flow Control (IFC):} Construct a formal lattice model combining Denning's confidentiality lattice~\cite{denning1976lattice} with Biba's integrity lattice~\cite{biba1977integrity}, tracking data taint across the agent's multi-step execution history.
+    \item \textbf{Deploy a Multi-Tier Inspection Pipeline:} Combine sub-millisecond heuristic filtering, ONNX-quantized neural prompt injection classifiers, Presidio Data Loss Prevention (DLP), and Open Policy Agent (OPA) declarative rules.
+    \item \textbf{Enforce Cryptographic Payload Binding:} Prevent Time-of-Check to Time-of-Use (TOCTOU) payload substitution attacks by generating canonical SHA-256 bound approval tokens.
+    \item \textbf{Empirically Validate Performance \& Scalability:} Subject the gateway to a suite of 10 real-world adversarial attack scenarios, automated regression tests, and high-concurrency load stress tests while keeping latency overhead under 20 milliseconds.
+    \item \textbf{Build a Security Operations Center (SOC) Console:} Provide an interactive dashboard displaying real-time threat radars, approval queues, and Causal Lineage Directed Acyclic Graphs (DAGs).
+\end{enumerate}
+
+\section{Scope of the Project}
+The scope encompasses asynchronous Python backend architectures interacting with agentic frameworks (LangChain, AutoGen, CrewAI) or standard OpenAI/REST tool-calling interfaces. It focuses on in-line payload inspection, provenance tracking, and cryptographic token verification with zero client agent code refactoring.
+
+\section{Literature Review \& Related Work}
+The theoretical foundations of AEGIS synthesize principles from formal Information Flow Control (Denning 1976~\cite{denning1976lattice}, Biba 1977~\cite{biba1977integrity}), capability-based access security (Hardy 1988~\cite{hardy1988confused}, Saltzer and Schroeder 1975~\cite{saltzer1975protection}, Miller 2006~\cite{miller2006robust}), and modern adversarial machine learning~\cite{greshake2023not,liu2024prompt,xie2024defending}. Existing solutions like NVIDIA NeMo Guardrails~\cite{rebedea2023nemo} introduce prohibitive latency (>180~ms) through secondary LLM calls without providing formal provenance invariants, while commercial API gateways (Kong, Cloudflare) remain stateless~\cite{beloglazov2013managing,mell2011nist,sandhu1996role}.

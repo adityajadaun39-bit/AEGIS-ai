@@ -1,0 +1,119 @@
+\documentclass[12pt,a4paper,oneside]{report}
+
+% -----------------------------------------------------------------------------
+% Core Document Geometry and Encoding
+% -----------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{setspace}
+\onehalfspacing
+
+% -----------------------------------------------------------------------------
+% Mathematical Formulations and Theorem Environments
+% -----------------------------------------------------------------------------
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{axiom}[definition]{Axiom}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[chapter]
+
+% -----------------------------------------------------------------------------
+% Tabular and Graphical Layout Packages
+% -----------------------------------------------------------------------------
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+% -----------------------------------------------------------------------------
+% Source Code Listings Configuration
+% -----------------------------------------------------------------------------
+\usepackage{listings}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codeblue}{rgb}{0.13,0.13,0.65}
+\definecolor{codegreen}{rgb}{0.0,0.5,0.0}
+\definecolor{codebg}{rgb}{0.97,0.97,0.97}
+
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  captionpos=b,
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{codeblue}\bfseries,
+  stringstyle=\color{red!70!black},
+  numbers=left,
+  numberstyle=\tiny\color{codegray},
+  numbersep=8pt,
+  frame=single,
+  rulecolor=\color{black!20},
+  showspaces=false,
+  showstringspaces=false,
+  keepspaces=true,
+  tabsize=2
+}
+
+% -----------------------------------------------------------------------------
+% Citation and Cross-Referencing Packages
+% -----------------------------------------------------------------------------
+\usepackage{cite}
+\usepackage[hidelinks,breaklinks=true,pdfencoding=auto]{hyperref}
+\usepackage{cleveref}
+
+\hypersetup{
+  pdftitle={AEGIS: Zero-Trust Gateway and Information Flow Lattice for Autonomous AI Agents},
+  pdfauthor={Farhan Mallik et al.},
+  pdfsubject={Academic College Capstone Project Report},
+  pdfkeywords={Information Flow Control, Prompt Injection, Confused Deputy, Provenance Tracking, Autonomous AI Agents}
+}
+
+% -----------------------------------------------------------------------------
+% Document Body
+% -----------------------------------------------------------------------------
+\begin{document}
+
+% Frontmatter Section
+\pagenumbering{roman}
+\input{frontmatter/title}
+\input{frontmatter/certificate}
+\input{frontmatter/declaration}
+\input{frontmatter/abstract}
+
+% Navigation Lists
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+
+% Main Chapters
+\pagenumbering{arabic}
+\input{chapters/chapter1}
+\input{chapters/chapter2}
+\input{chapters/chapter3}
+\input{chapters/chapter4}
+\input{chapters/chapter5}
+\input{chapters/chapter6}
+\input{chapters/chapter7}
+\input{chapters/chapter8}
+\input{chapters/chapter9}
+
+% Bibliography
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

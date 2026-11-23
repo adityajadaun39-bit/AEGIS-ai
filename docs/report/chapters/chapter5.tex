@@ -1,0 +1,134 @@
+\chapter{System Architecture \& Design}
+\label{chap:arch}
+
+\section{Overview of the Zero-Trust Reverse Proxy Architecture}
+The central architectural thesis of AEGIS is that security enforcement in autonomous agent systems must be \textbf{in-line, external, and non-bypassable}. Rather than embedding safety guardrails inside the agent's application code or relying on the agent's LLM to police itself, AEGIS positions itself as a transparent, zero-trust API reverse proxy between the agent runtime and external tool execution brokers.
+
+Figure \ref{fig:arch} illustrates the high-level system topology of AEGIS.
+
+\begin{figure}[htbp]
+\centering
+\begin{picture}(420,180)
+\put(10,130){\framebox(90,40){\shortstack{\textbf{Agent Runtime} \\ (LangGraph / ReAct)}}}
+\put(100,150){\vector(1,0){50}}
+\put(105,155){\scriptsize Action Request}
+
+\put(150,20){\framebox(140,150){}}
+\put(155,155){\textbf{AEGIS In-Line Gateway}}
+\put(160,130){\framebox(120,20){\scriptsize 1. HMAC Auth \& Token Check}}
+\put(160,105){\framebox(120,20){\scriptsize 2. Dual-Tier Threat / DLP Pre-Scan}}
+\put(160,80){\framebox(120,20){\scriptsize 3. IFC Lattice \& Theorem 1 PEP}}
+\put(160,55){\framebox(120,20){\scriptsize 4. Cryptographic HITL Review}}
+\put(160,30){\framebox(120,20){\scriptsize 5. SQLite WAL Audit Ledger}}
+
+\put(290,140){\vector(1,0){50}}
+\put(295,145){\scriptsize Authorized}
+\put(340,120){\framebox(70,40){\shortstack{\textbf{Tool Broker} \\ Sandbox}}}
+
+\put(220,20){\vector(0,-1){15}}
+\put(180,-5){\scriptsize SQLite WAL Storage}
+
+\put(290,65){\vector(1,0){50}}
+\put(295,70){\scriptsize SSE Events}
+\put(340,45){\framebox(70,40){\shortstack{\textbf{SOC Console} \\ (Streamlit)}}}
+\end{picture}
+\caption{AEGIS In-Line Zero-Trust Reverse Proxy Architecture}
+\label{fig:arch}
+\end{figure}
+
+The architecture comprises four core functional planes:
+\begin{enumerate}
+    \item \textbf{Untrusted Execution Plane (Autonomous Agent Runtime):} Houses the reasoning loops (e.g., LangGraph, AutoGen, ReAct). The agent formulates action plans, constructs parameters, and generates justifications. From the gateway's perspective, this plane is treated as completely untrusted.
+    \item \textbf{Enforcement Plane (AEGIS Gateway Core):} An asynchronous, high-throughput ASGI microservice implemented in FastAPI. The gateway intercepts all outgoing tool requests, validates agent credentials, computes dynamic lattice flows, enforces declarative policies, manages human approvals, and records immutable audits.
+    \item \textbf{Isolated Tool Execution Plane (Tool Broker):} A hardened execution sandbox that contains tool adapters (e.g., database clients, filesystem connectors, SMTP mailers). Tools are physically isolated from the agent runtime and can only be invoked by the gateway upon successful policy verification.
+    \item \textbf{Observability \& Governance Plane (SOC Console):} A real-time Security Operations Center dashboard powered by Streamlit and Plotly, consuming Server-Sent Events (SSE) from the gateway to visualize execution graphs and manage cryptographic human reviews.
+\end{enumerate}
+
+\section{Gateway Core \& REST Interface}
+The gateway exposes a clean REST API built upon asynchronous endpoints:
+\begin{itemize}
+    \item \texttt{POST /actions}: The primary Policy Enforcement Point (PEP). Autonomous agents submit proposed tool executions along with parameter payloads, provenance context references, and optional approval tokens.
+    \item \texttt{GET /approvals} and \texttt{POST /approvals}: Endpoints dedicated to the Human-in-the-Loop lifecycle, allowing agents to request reviews and human operators to query pending approvals.
+    \item \texttt{POST /approvals/\{approval\_id\}/review}: Cryptographic review endpoint where authorized human reviewers sign decisions (\texttt{APPROVE} or \texttt{REJECT}) with timing-safe reviewer authentication.
+    \item \texttt{GET /audit}: Administrative query interface supporting multi-parameter filtering, pagination, and incident forensics.
+    \item \texttt{GET /audit/traces/\{trace\_id\}}: Reconstructs the complete, causal distributed execution trace for any specific transaction.
+    \item \texttt{GET /audit/attacks/\{attack\_id\}}: Correlates multi-turn attack progressions across multiple distinct agent actions and sessions.
+    \item \texttt{GET /audit/stream}: A persistent Server-Sent Events (SSE) streaming endpoint (\texttt{text/event-stream}) that pushes real-time audit decisions directly to the SOC console.
+\end{itemize}
+
+\section{The 9-Step Policy Enforcement Pipeline}
+The cornerstone of AEGIS is the sequential, 9-step Policy Enforcement Point pipeline implemented in \texttt{backend/security/gateway.py}. The pipeline enforces a strict \textbf{Fail-Closed} discipline: if any step encounters an invalid parameter, missing token, policy denial, or runtime exception, execution is immediately halted, a security incident is logged, and a terminal denial is returned to the agent.
+
+The nine discrete stages proceed as follows:
+
+\subsection{Step 0: Dual-Tier Threat \& DLP Pre-Scan}
+Before allocating database resources or evaluating policy graphs, the incoming request payload and resource target are subjected to high-throughput pre-screening:
+\begin{itemize}
+    \item \textbf{Injection Pre-Scan:} \texttt{detect\_injection()} evaluates request parameters against Tier-1 heuristic regex families ($< 1.8\text{ ms}$). If high-confidence injection markers are detected, the request is flagged with an elevated threat score ($S \ge 0.90$).
+    \item \textbf{Data Loss Prevention (DLP) Scan:} \texttt{scan\_for\_secrets()} parses content strings against 8 high-entropy regex patterns (AWS keys, OpenAI tokens, Slack tokens, private keys). If outbound parameters contain unredacted secrets destined for external sinks, execution is blocked immediately with a DLP violation error.
+\end{itemize}
+
+\subsection{Step 1: Provenance Context Resolution}
+The agent provides a \texttt{provenance\_context\_id} referencing prior ingested artifacts. The gateway resolves this identifier against the internal SQLite \texttt{provenance\_contexts} store.
+\begin{itemize}
+    \item If the context ID is missing for an outbound action requiring external egress (e.g., \texttt{send\_email}), the gateway denies execution due to lack of verified provenance.
+    \item If the context ID is invalid, expired (beyond its 30-minute TTL), or forged, resolution fails closed, and the action is quarantined.
+    \item Resolved contexts extract the causal parent lineage and associate the transaction with a persistent \texttt{attack\_id} if prior threats were detected.
+\end{itemize}
+
+\subsection{Step 2: Agent RBAC Authorization}
+The gateway verifies the identity and role-based permissions of the requesting agent. Each agent possesses a pre-registered cryptographic token. The gateway performs constant-time comparison (\texttt{hmac.compare\_digest}) against the static \texttt{AGENT\_REGISTRY}. Agents attempting to invoke tools outside their registered operational envelope (e.g., a research agent attempting to dispatch emails directly) are rejected at this stage.
+
+\subsection{Step 3: Declarative Policy Check}
+The gateway evaluates coarse-grained declarative access control policies. In production environments, AEGIS invokes an Open Policy Agent (OPA) daemon executing compiled Rego rules (\texttt{policies/agent\_access.rego}). In isolated or edge deployments, the gateway executes an embedded in-process YAML policy evaluator (\texttt{backend/security/policy\_engine.py}). If the declarative policy returns \texttt{allow = false}, execution is halted.
+
+\subsection{Step 4: Formal IFC Lattice Verification (Theorem 1 PEP)}
+This step represents the formal verification gate grounded in Theorem \ref{thm:dominance}:
+\begin{itemize}
+    \item The gateway calls \texttt{evaluate\_information\_flow(request, provenance\_records)}.
+    \item The engine recursively computes cumulative confidentiality $C_{\text{prov}}(a)$ via Join ($\sqcup_C$), cumulative integrity $I_{\text{prov}}(a)$ via Meet ($\sqcap_I$), and cumulative taint $\tau_{\text{prov}}(a)$ across all lineage ancestors.
+    \item \textbf{Theorem 1 Enforcement:} If the source lineage contains untrusted instructions ($\tau = \text{True}$) or if the source integrity is lower than the sink requirement ($I_{\text{prov}} \sqsubset_I I_{\text{req}}$), the action is denied immediately.
+    \item \textbf{Crucial Ordering Guarantee:} Because Step 4 executes \textit{prior to} Step 5, a compromised agent can never use a human approval to override tainted provenance.
+\end{itemize}
+
+\subsection{Step 5: Cryptographic Human Approval Check}
+For sensitive operations requiring human oversight (e.g., dispatching external emails or modifying production databases):
+\begin{itemize}
+    \item \textbf{First Ingress (No Approval Token):} The gateway creates a pending approval record in SQLite, computes the deterministic SHA-256 payload digest, assigns an expiration TTL (10 minutes), and returns HTTP status \texttt{REQUIRES\_APPROVAL} with the generated \texttt{approval\_id}.
+    \item \textbf{Second Ingress (With Approval Token):} When the agent resubmits the action with an \texttt{approval\_id}, the gateway invokes \texttt{consume\_approval()}. The engine verifies that:
+    \begin{enumerate}
+        \item The approval status is currently \texttt{APPROVED}.
+        \item The approval token has not expired ($t_{\text{current}} \le t_{\text{expires}}$).
+        \item The incoming parameter payload matches the original canonical SHA-256 hash byte-for-byte.
+    \end{enumerate}
+    If valid, the status is atomically updated to \texttt{CONSUMED} via a single SQL transaction.
+\end{itemize}
+
+\subsection{Step 6: Agent Permissions Lookup}
+The gateway verifies that the specific target resource (e.g., \texttt{public\_report.pdf}) is explicitly present within the agent's permitted resource whitelist (\texttt{allowed\_resources}). Requests targeting unauthorized files (e.g., \texttt{confidential\_notes.txt}) are denied.
+
+\subsection{Step 7: Controlled Tool Broker Execution}
+Once all security gates are satisfied, the gateway dispatches the action to \texttt{tool\_broker.execute(tool\_name, parameters)}. The tool broker executes inside an isolated runtime sandbox. If an external tool throws an unhandled exception or network timeout, the tool broker catches the error safely, ensuring that broker failures never compromise gateway stability.
+
+\subsection{Step 8: Server-Controlled Post-Execution Provenance Registration}
+If the executed tool produced new data (for example, \texttt{read\_document} retrieving file contents), the gateway generates a new immutable provenance node:
+\begin{itemize}
+    \item The gateway assigns a cryptographically random UUIDv4.
+    \item If the source document was classified as untrusted or contained prompt injection patterns, the node is stamped with $I(v) = \text{UNTRUSTED}$ and $\tau(v) = \text{True}$.
+    \item The node is persisted in SQLite with a 30-minute TTL, establishing the root for future multi-hop reasoning steps.
+\end{itemize}
+
+\subsection{Step 9: Immutable Audit Logging}
+In the final step, the gateway logs the complete transaction to the SQLite WAL database:
+\begin{equation}
+\text{AuditEntry} = (\text{trace\_id}, \text{timestamp}, \text{agent\_id}, \text{action}, \text{resource}, \text{decision}, \text{reason}, \text{tool\_status}, \text{attack\_id})
+\end{equation}
+Decisions (\texttt{ALLOW}, \texttt{DENY}, \texttt{REQUIRES\_APPROVAL}, \texttt{ERROR}) are pushed to the SSE broadcast channel, updating connected SOC dashboards within milliseconds.
+
+\section{Tool Broker Containment \& Execution Isolation}
+The Tool Broker (\texttt{backend/tools/tool\_broker.py}) enforces physical separation between agent intent and environmental execution. Key design characteristics include:
+\begin{itemize}
+    \item \textbf{Strict Dynamic Dispatch:} Tools must be explicitly registered within the broker's internal registry. Dynamic reflection, string evaluation (\texttt{eval()}), or arbitrary shell invocation are strictly prohibited.
+    \item \textbf{Schema Parameter Validation:} All parameter dictionaries are validated against Pydantic schemas prior to dispatch.
+    \item \textbf{Graceful Failure Containment:} External API errors (e.g., SMTP connection refused) are captured and returned as structured error objects (\texttt{ToolExecutionResult(success=False, error=...)}), preventing unhandled exceptions from leaking stack traces to the agent.
+\end{itemize}

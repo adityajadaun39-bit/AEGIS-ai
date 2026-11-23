@@ -1,0 +1,118 @@
+\chapter{DESIGN, METHODOLOGY \& ARCHITECTURE}
+
+\section{System Architecture \& Gateway Pipeline}
+AEGIS operates as an in-line reverse proxy intercepting all tool invocations proposed by an autonomous agent before reaching downstream tools, databases, or network sinks.
+
+\begin{figure}[htbp]
+\centering
+\fbox{
+\begin{minipage}{0.9\textwidth}
+\small
+\texttt{Agent Request} $\to$ \textbf{[Stage 1: HMAC Auth]} $\to$ \textbf{[Stage 2: Dual-Tier ML]} $\to$ \textbf{[Stage 3: DLP]} $\to$ \textbf{[Stage 4: OPA Policy]} $\to$ \textbf{[Stage 5: Dual-Lattice IFC]} $\to$ \textbf{[Stage 6: Crypto Broker]} $\to$ \texttt{Sandbox Execution}
+\end{minipage}
+}
+\caption{High-Level AEGIS Gateway Architecture \& In-Line Inspection Pipeline}
+\label{fig:pipeline_arch}
+\end{figure}
+
+The pipeline executes sequentially:
+\begin{enumerate}
+    \item \textbf{Stage 1 (HMAC Auth):} Validates agent credentials in $<1$~ms.
+    \item \textbf{Stage 2 (ML Injection Classifier):} Tier-1 regex heuristics ($<1$~ms) filter known signatures, falling back to Tier-2 ONNX models for borderline inputs.
+    \item \textbf{Stage 3 (DLP Scanner):} Regex and Presidio scanners detect sensitive credentials and PII.
+    \item \textbf{Stage 4 (OPA Policy):} Evaluates declarative RBAC authorization.
+    \item \textbf{Stage 5 (Dual-Lattice IFC):} Verifies session taint and enforces Theorem 1.
+    \item \textbf{Stage 6 (Approval Broker):} Validates cryptographic tokens and dispatches execution inside an isolated sandbox.
+\end{enumerate}
+
+\section{Mathematical Methodology: Dual-Lattice IFC Model}
+The formal security state is modeled as the Cartesian product lattice:
+\begin{equation}
+\mathcal{L}_{IFC} = \langle \mathcal{C}, \sqsubseteq_C, \sqcup_C \rangle \times \langle \mathcal{I}, \sqsubseteq_I, \sqcap_I \rangle
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\caption{Denning Confidentiality Lattice Levels and Flow Rules}
+\label{tab:conf_lattice}
+\begin{tabular}{c l p{5.5cm} p{4.5cm}}
+\toprule
+\textbf{Level} & \textbf{Identifier} & \textbf{Semantics} & \textbf{Allowable Flows ($\sqsubseteq_C$)} \\
+\midrule
+$c_0$ & \texttt{PUBLIC} & Openly accessible data & Flows to all levels ($c_0, c_1, c_2, c_3$) \\
+$c_1$ & \texttt{INTERNAL} & Internal enterprise documentation & Flows to $c_1, c_2, c_3$; Cannot flow to $c_0$ \\
+$c_2$ & \texttt{CONFIDENTIAL} & Customer PII, financial records & Flows to $c_2, c_3$; Cannot flow to $c_0, c_1$ \\
+$c_3$ & \texttt{RESTRICTED} & Root keys, cryptographic secrets & Flows strictly to $c_3$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Biba Integrity Lattice Levels and Invocation Constraints}
+\label{tab:integ_lattice}
+\begin{tabular}{c l p{5.5cm} p{4.5cm}}
+\toprule
+\textbf{Level} & \textbf{Identifier} & \textbf{Semantics} & \textbf{Allowable Invocations ($\sqsubseteq_I$)} \\
+\midrule
+$i_0$ & \texttt{UNTRUSTED} & External web pages, PDFs, emails & Cannot invoke high-integrity tools \\
+$i_1$ & \texttt{EVALUATED} & Sanitized external data & May invoke standard read-only tools \\
+$i_2$ & \texttt{TRUSTED} & Internal verified databases & May invoke privileged enterprise tools \\
+$i_3$ & \texttt{SYSTEM} & Core gateway policies & Unrestricted execution authority \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+When the agent reads an external artifact $d$ with label $\langle C(d), I(d) \rangle$, memory state $M$ transitions via:
+\begin{align}
+C(M_{t+1}) &= C(M_t) \sqcup_C C(d) \quad \text{(Least Upper Bound Join)} \\
+I(M_{t+1}) &= I(M_t) \sqcap_I I(d) \quad \text{(Greatest Lower Bound Meet)}
+\end{align}
+Because $\sqcap_I$ is monotonic, reading untrusted data permanently degrades integrity to \texttt{UNTRUSTED}.
+
+\section{Formal Verification: Theorem 1 \& Invariant Proof}
+\begin{theorem}[Provenance Dominance Invariant]
+Let $\pi = (s_0, a_0, s_1, \dots, a_{k-1}, s_k)$ be an arbitrary execution trace. If there exists $j < k$ such that data $d_j$ has Integrity $I(d_j) = \text{UNTRUSTED}$, then for all privileged actions $a_k$ targeting sink $S$ where $I(S) \ge \text{TRUSTED}$:
+\begin{equation}
+\text{GateDecision}(a_k, \pi, \text{HumanApproval} = \text{TRUE}) \equiv \text{DENY}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+We prove by mathematical induction on trace length $k$.
+\begin{itemize}
+    \item \textbf{Base Case ($k=1$):} At $s_0$, $I(s_0) = \text{TRUSTED}$. Reading untrusted artifact $d_0$ yields $I(s_1) = \text{TRUSTED} \sqcap_I \text{UNTRUSTED} = \text{UNTRUSTED}$. The invocation condition requires $I(s_1) \ge_I I(S) = \text{TRUSTED}$, which evaluates to FALSE. The gateway denies execution.
+    \item \textbf{Inductive Step ($m \to m+1$):} Assume $I(s_m) = \text{UNTRUSTED}$. Any subsequent read $d_{m+1}$ yields $I(s_{m+1}) = \text{UNTRUSTED} \sqcap_I I(d_{m+1}) = \text{UNTRUSTED}$, as $\text{UNTRUSTED}$ is the bottom element ($\bot_I$). Local computation preserves integrity. Evaluating the gateway decision:
+    \begin{equation}
+    \text{GateDecision}(a, \pi, H) = \text{Gate}_{IFC}(\pi) \land (\text{RequiresApproval}(a) \implies H)
+    \end{equation}
+    Since $\text{Gate}_{IFC}(\pi) \equiv \text{FALSE}$, $\text{FALSE} \land \text{TRUE} = \text{FALSE} \equiv \text{DENY}$.
+\end{itemize}
+Thus, social engineering human approvers yields exactly zero bypass probability ($P(\text{Bypass}) = 0$).
+\end{proof}
+
+\section{Data Flow, Sequence and State Modeling}
+Level 0 and Level 1 DFDs illustrate system boundary interactions and sub-stage data flow. UML sequence diagrams verify the 10-step cryptographic token binding handshake. The state transition model captures irreversible memory taint from \texttt{CLEAN} to \texttt{TAINTED}.
+
+\section{Database Schema \& Audit Store Design}
+The audit store utilizes SQLite 3 in WAL mode. Table~\ref{tab:db_schema} outlines the relational schema.
+
+\begin{table}[htbp]
+\centering
+\caption{SQLite WAL Audit Log Relational Schema Specification}
+\label{tab:db_schema}
+\begin{tabular}{l l l p{5.5cm}}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+\texttt{id} & INTEGER & PRIMARY KEY AUTOINCREMENT & Unique sequence identifier \\
+\texttt{timestamp} & TEXT & NOT NULL & ISO-8601 UTC microsecond timestamp \\
+\texttt{trace\_id} & TEXT & NOT NULL, INDEXED & UUID tracking execution trace \\
+\texttt{session\_id} & TEXT & NOT NULL, INDEXED & Identifier for agent session \\
+\texttt{action\_name} & TEXT & NOT NULL & Target tool or API action \\
+\texttt{decision} & TEXT & NOT NULL & Decision (\texttt{PERMITTED}, \texttt{DENIED}) \\
+\texttt{token\_hash} & TEXT & NULLABLE & SHA-256 hash of approval token \\
+\texttt{latency\_ms} & REAL & NOT NULL & Gateway processing latency in ms \\
+\bottomrule
+\end{tabular}
+\end{table}

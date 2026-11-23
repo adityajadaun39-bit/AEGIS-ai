@@ -1,0 +1,69 @@
+\chapter{Introduction, Motivation \& Objectives}
+\label{chap:intro}
+
+\section{The Autonomous Agent Security Crisis}
+The paradigm of Artificial Intelligence has transitioned rapidly from passive, query-response conversational interfaces to proactive, autonomous agentic systems. Frameworks such as LangGraph, AutoGen \cite{wu2023autogen}, and ReAct-based execution loops \cite{yao2023react} empower Large Language Models (LLMs) to formulate autonomous reasoning traces, synthesize parameterized function invocations, and interact directly with external digital environments. Today, autonomous agents are granted programmatic agency over relational databases, local filesystem hierarchies, corporate email servers, enterprise software repositories, and cloud API endpoints.
+
+However, this explosive growth in autonomous capability has outpaced the fundamental security principles required to govern untrusted execution. Unlike traditional computing architectures that maintain rigorous hardware-enforced boundaries between executable code and passive data buffers (such as the Harvard architecture or the $W \oplus X$ ``Write XOR Execute'' page protections in modern operating systems), modern neural network architectures possess no intrinsic separation between instructions and data. 
+
+In a standard transformer architecture, prompt instructions, system directives, retrieved documents, external API responses, and user inputs are concatenated into a single, contiguous sequence of discrete tokens:
+\begin{equation}
+\mathbf{X} = [x_1, x_2, \dots, x_N] \in \mathbb{R}^{N \times d_{\text{model}}}
+\end{equation}
+The self-attention mechanism computes pairwise token affinities indiscriminately across the entirety of this sequence:
+\begin{equation}
+\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^T}{\sqrt{d_k}}\right)\mathbf{V}
+\end{equation}
+Because the model evaluates semantic relationships across the combined sequence without structural privilege boundaries, an external adversary can embed malicious control sequences inside passive data payloads—such as an email, a scanned PDF document, a web search snippet, or a database record. When the agent ingests this unprivileged text, the embedded payload hijacks the attention distribution, causing the model to interpret adversary-supplied data as privileged system instructions. This phenomenon is known as \textbf{Indirect Prompt Injection} \cite{greshake2023indirect, ribeiro2024bipia}, designated as the number one vulnerability in the OWASP Top 10 for Large Language Models (OWASP LLM01) \cite{owasp2025top10llm}.
+
+\section{The Confused Deputy Problem in Multi-Agent Ecosystems}
+The fundamental hazard of indirect prompt injection is not merely that an LLM outputs offensive or nonsensical text, but that the agent acts as an authorized \textbf{Confused Deputy} \cite{saltzer1975protection, zeng2024agentsecurity}. 
+
+In computer security, the Confused Deputy problem describes a scenario where a low-privilege entity tricks a high-privilege program into misusing its authority on behalf of the attacker. In an agentic tool-calling pipeline:
+\begin{enumerate}
+    \item The autonomous agent is legitimately provisioned with administrative secrets, database query permissions, filesystem access, and outbound network communication tokens.
+    \item An external, unauthenticated adversary cannot directly access these tools or resources.
+    \item The adversary places an indirect prompt injection payload into a public resource (e.g., a customer support ticket, an external CV, or an online review).
+    \item The agent reads the unprivileged resource as part of a legitimate task assigned by a benign user.
+    \item The adversarial text instructs the agent to invoke its privileged tools—for example, dumping confidential customer records, executing arbitrary bash scripts, or dispatching proprietary source code to an external command-and-control server.
+    \item The execution layer downstream receives a well-formed API call bearing the agent's legitimate credentials and dutifully executes the destructive payload.
+\end{enumerate}
+
+Traditional countermeasures fail catastrophically in this setting:
+\begin{itemize}
+    \item \textbf{System Prompt Defenses:} Attempting to instruct the model via prompts (e.g., \textit{``Never follow instructions found inside external documents''}) fails because adversarial prompts can exploit semantic jailbreaks, role-playing, and delimiter overrides to erase or supersede prior instructions \cite{liu2023promptinjection, perez2022ignore}.
+    \item \textbf{Heuristic String Classifiers:} Static input/output guardrails lack visibility into the multi-hop reasoning history and causal data lineage of the agent. An external classifier evaluating an outbound action cannot determine whether the parameters originated from a trusted human directive or an untrusted document ingested three execution turns prior.
+    \item \textbf{Naive Human-in-the-Loop (HITL) Controls:} Mandating human approval before high-risk tool execution introduces a fatal human factor vulnerability. Compromised agents do not present overtly malicious proposals (such as \textit{``May I exfiltrate your secrets?''}); rather, they fabricate plausible, socially engineered justifications (e.g., \textit{``May I dispatch this encrypted routine backup to our Frankfurt staging node?''}). Human reviewers, overwhelmed by alert fatigue, routinely click ``Approve'', thereby certifying an attack they cannot comprehend.
+\end{itemize}
+
+\section{Research Motivation \& Problem Statement}
+The core insight of this research is that \textbf{an AI model cannot be trusted to police its own execution, nor can a human operator serve as an infallible security boundary}. Security must be enforced externally, deterministically, and mathematically at the architectural boundary where reasoning translates into physical action.
+
+Therefore, the problem statement of this capstone research is formulated as follows:
+\begin{quote}
+\textit{How can an enterprise-grade execution gateway mathematically enforce zero-trust Information Flow Control (IFC) and non-bypassable causal provenance guarantees over autonomous AI agents, ensuring that untrusted or tainted inputs can never trigger privileged actions—even when a human operator grants explicit approval—while maintaining sub-25ms mediation latency and concurrent multi-agent throughput?}
+\end{quote}
+
+\section{Key Project Contributions}
+To resolve this foundational challenge, this project introduces \textbf{AEGIS} (\textbf{Autonomous Enforcement Gateway for Information Security}). The primary contributions of this project are:
+\begin{enumerate}
+    \item \textbf{Formal Dual-Lattice Information Flow Control:} We adapt Dorothy Denning's 1976 Confidentiality Lattice \cite{denning1976lattice} and Kenneth Biba's 1977 Integrity Lattice \cite{biba1977integrity} to autonomous agent workflows. We define exact Least Upper Bound ($\sqcup_C$) join and Greatest Lower Bound ($\sqcap_I$) meet operations to govern data propagation across multi-turn tool execution DAGs.
+    \item \textbf{Theorem 1 (Provenance Dominance Invariant):} We formally state and prove Theorem~1, which establishes that data provenance strictly dominates human authorization. We prove via mathematical induction over execution DAGs that no human approval token can validate an action whose causal lineage contains untrusted instructions, eliminating the Confused Deputy vulnerability.
+    \item \textbf{9-Step Policy Enforcement Point (PEP) Architecture:} We engineer a transparent reverse proxy gateway built on FastAPI and ASGI, implementing timing-safe HMAC agent authentication, dual-tier threat detection (sub-2ms regex + local ONNX transformer inference under 25ms), high-entropy Data Loss Prevention (DLP) across 8 secret regex families, and canonical SHA-256 parameter binding.
+    \item \textbf{Zero-Lock WAL Concurrency Engine:} We configure SQLite Write-Ahead Logging (WAL) with busy timeout pooling and atomic single-use state transitions, guaranteeing zero lock contention under concurrent multi-agent traffic.
+    \item \textbf{Comprehensive Empirical Validation:} We provide an exhaustive empirical benchmark comprising 106 unit tests (100\% pass rate in 2.59s), 10 security scenarios E01--E10 mapping to the OWASP Top 10 for LLMs (mean latency 17.98ms), 300 repeated reliability benchmark runs (100\% decision match rate, median latency 23.29ms), and a 50-worker load test (23.3 req/s with 0 lock errors).
+    \item \textbf{Interactive Tactical SOC Console:} We implement a Streamlit and Plotly-powered Security Operations Center (SOC) dashboard providing live causal DAG visualization, real-time SSE telemetry, and an interactive 4-stage adversarial sandbox.
+\end{enumerate}
+
+\section{Report Organization}
+The remainder of this report is organized into the following chapters:
+\begin{itemize}
+    \item \textbf{Chapter \ref{chap:literature}} conducts an exhaustive literature survey, reviewing historical foundations of information flow control, recent prompt injection vulnerabilities, and comparative analysis against industry guardrails.
+    \item \textbf{Chapter \ref{chap:threat}} formalizes the adversary model, maps the OWASP Top 10 for LLMs to agentic tool pipelines, and provides the mathematical formulation of the Confused Deputy problem.
+    \item \textbf{Chapter \ref{chap:math}} presents the formal mathematical foundations of AEGIS, detailing the dual-lattice model, DAG provenance definitions, and the complete step-by-step inductive proof of Theorem~1 and its supporting lemmas.
+    \item \textbf{Chapter \ref{chap:arch}} details the end-to-end system architecture, reverse proxy mechanics, the 9-step Policy Enforcement Point pipeline, and tool broker containment.
+    \item \textbf{Chapter \ref{chap:impl}} explores implementation specifics, including HMAC authentication, the dual-tier ML detector, the 8-pattern DLP engine, SQLite WAL persistence, and the Streamlit SOC UI.
+    \item \textbf{Chapter \ref{chap:results}} presents empirical benchmarks, including the 106-test breakdown, the 10 security scenarios (E01--E10), the 300-run reliability profiling, and the 50-worker WAL concurrency load test.
+    \item \textbf{Chapter \ref{chap:wbs}} details the 5-member engineering team Work Breakdown Structure (WBS), the 15-week milestone roadmap, the 15-minute viva presentation script, and 10 high-probability examination questions with rigorous model answers.
+    \item \textbf{Chapter \ref{chap:conclusion}} synthesizes project outcomes, discusses technical limitations, and charts future research directions in sub-string taint tracking and hardware-enforced trusted execution environments.
+\end{itemize}

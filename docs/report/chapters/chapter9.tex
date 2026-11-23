@@ -1,0 +1,50 @@
+\chapter{Conclusion, Limitations \& Future Scope}
+\label{chap:conclusion}
+
+\section{Summary of Project Contributions}
+As autonomous AI agents assume increasing responsibility over enterprise software pipelines, databases, and network communication channels, the absence of foundational execution security threatens the viability of agentic systems. Because generative transformer models inherently conflate executable control directives with passive data buffers, relying on the model to govern itself or relying on human reviewers to catch subtle social engineering exploits creates severe Confused Deputy vulnerabilities (OWASP LLM01, LLM06).
+
+This capstone project introduced \textbf{AEGIS} (\textbf{Autonomous Enforcement Gateway for Information Security}), a zero-trust, in-line Policy Enforcement Point (PEP) proxy designed to provide provable, non-bypassable information security for autonomous agent workflows. 
+
+The major achievements of this project include:
+\begin{enumerate}
+    \item \textbf{Mathematical Grounding via Dual-Lattice IFC:} We synthesized Dorothy Denning's 1976 Confidentiality Lattice \cite{denning1976lattice} and Kenneth Biba's 1977 Integrity Model \cite{biba1977integrity} into an operational security engine for autonomous agents. By computing recursive Join ($\sqcup_C$) and Meet ($\sqcap_I$) operations over execution Directed Acyclic Graphs (DAGs), AEGIS tracks data sensitivity and untrusted taint across complex, multi-turn reasoning traces.
+    \item \textbf{Formalization and Inductive Proof of Theorem 1:} We established and formally proved \textbf{Theorem 1 (The Provenance Dominance Invariant)}, mathematically demonstrating that data taint strictly dominates human authorization. By enforcing that information flow checks execute prior to approval consumption, AEGIS mathematically nullifies human approvals granted to tainted actions, eliminating the Confused Deputy vulnerability.
+    \item \textbf{High-Performance 9-Step PEP Reverse Proxy:} We engineered a transparent FastAPI ASGI gateway incorporating timing-safe HMAC agent authentication, dual-tier threat detection (sub-2ms regex screening combined with local INT8 ONNX transformer inference under 25ms), high-entropy Data Loss Prevention (DLP) across 8 secret regex families, and canonical JSON SHA-256 parameter binding.
+    \item \textbf{Lock-Free WAL Concurrency Engine:} By configuring SQLite with Write-Ahead Logging (WAL) and graceful busy-timeout pooling, we eliminated database lock contention, achieving 23.3 req/s throughput under 50 concurrent worker threads with zero locking errors.
+    \item \textbf{Comprehensive Empirical Validation:} We verified the system through:
+    \begin{itemize}
+        \item A 106-test pytest regression suite executing with a 100\% pass rate in 2.59 seconds.
+        \item 10 structured security scenarios (E01--E10) mapping to the OWASP Top 10 for LLMs, achieving 100\% enforcement accuracy with a mean gateway latency of 17.98~ms.
+        \item 300 repeated reliability benchmark runs demonstrating a 100\% decision match rate and a median latency of 23.29~ms.
+        \item A 50-worker concurrency load test verifying lock-free stability.
+    \end{itemize}
+    \item \textbf{Tactical SOC Console:} We delivered a production-ready dark-mode Security Operations Center dashboard powered by Streamlit and Plotly, rendering interactive causal provenance DAGs, cryptographic review desks, and live adversarial sandboxes.
+\end{enumerate}
+
+\section{Architectural Limitations}
+While AEGIS successfully addresses critical agentic security vulnerabilities, several architectural limitations have been identified:
+\begin{enumerate}
+    \item \textbf{Coarse-Grained Document Taint Granularity:} In the current prototype, provenance tracking operates at the document and action payload granularity. If an autonomous agent ingests a 50-page technical report where 49 pages contain legitimate, trusted research and a single paragraph contains an indirect prompt injection payload, AEGIS taints the entire resulting provenance record ($I = \text{UNTRUSTED}, \tau = \text{True}$). Consequently, the agent cannot use legitimate facts from the clean portions of the document to execute external actions. Developing sub-string or token-level differential taint tracking remains an open challenge.
+    \item \textbf{Single-Node SQLite Persistence Scaling:} While SQLite WAL mode easily handled 50 concurrent workers and 23.3 req/s locally, it remains bounded by single-host filesystem I/O. In massive enterprise multi-agent clusters spanning hundreds of distributed Kubernetes worker nodes, concurrent write contention on a single WAL file will eventually become a bottleneck.
+    \item \textbf{Static Tool Registry Management:} In the prototype implementation, agent permissions and tool resource allocations are registered statically via YAML and Python registries. Dynamic agent registration and policy discovery for ephemeral, short-lived agents requires further infrastructure tooling.
+    \item \textbf{Simulated Tool Broker Bounds:} As noted in the evaluation methodology, external communication and filesystem tools were evaluated against deterministic sandbox simulators to ensure reproducible benchmarking. Production deployment requires testing against live enterprise SMTP relays, cloud object stores, and production SQL engines.
+\end{enumerate}
+
+\section{Future Research Roadmap}
+To build upon the foundations established by AEGIS, we chart four promising future research trajectories:
+
+\subsection{Sub-String \& Token-Level Differential Taint Tracking}
+A key frontier in neurosymbolic security is achieving fine-grained, token-level Information Flow Control within neural generation. Future iterations of AEGIS will investigate integrating transformer attention attribution matrices and integrated gradients to track token-level causal influence. If an agent synthesizes an action payload, the gateway could isolate which specific output tokens were causally derived from untrusted document chunks versus trusted user instructions, permitting clean parameters while redacting tainted clauses.
+
+\subsection{Hardware-Enforced Trusted Execution Environments (TEEs)}
+To protect against host-level operating system compromises and physical memory tampering, the AEGIS gateway core and agent runtimes can be encapsulated within hardware-enforced Trusted Execution Environments (TEEs), such as Intel SGX, AMD SEV-SNP, or AWS Nitro Enclaves. Combining cryptographic remote attestation with our dual-lattice model would guarantee that execution policies cannot be modified even by malicious root administrators.
+
+\subsection{Decentralized Multi-Agent Mesh Cryptographic Governance}
+In decentralized multi-agent federations where autonomous agents run across diverse organizational boundaries, centralized gateway mediation may be impractical. Future work will explore encoding provenance DAGs as cryptographically verifiable credential chains (e.g., using zero-knowledge proofs or append-only distributed ledgers). Each agent would pass signed provenance receipts alongside tool requests, allowing distributed tool endpoints to verify Theorem \ref{thm:dominance} locally without a centralized proxy.
+
+\subsection{Adaptive Reinforcement Learning Policy Refinement}
+While declarative Rego policies provide deterministic guarantees, complex enterprise environments require adaptive access policies. Future research will explore training reinforcement learning agents to dynamically propose least-privilege policy adjustments based on observed benign operational patterns, continually tightening tool permissions without impeding workflow efficiency.
+
+\section{Concluding Remarks}
+The transition toward autonomous agentic computing represents one of the most profound technological evolutions in computer science. However, autonomy without provable security boundaries is untenable. By demonstrating that Dorothy Denning's and Kenneth Biba's foundational lattice theories can be synthesized with modern asynchronous reverse proxies and causal DAG tracking, AEGIS establishes that deterministic, sub-25ms zero-trust governance is not only theoretically sound, but practically achievable for real-world enterprise AI deployments.

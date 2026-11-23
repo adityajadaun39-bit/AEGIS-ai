@@ -1,0 +1,28 @@
+\chapter{CONCLUSION \& FUTURE SCOPE}
+
+\section{Conclusion \& Project Summary}
+This minor project presented the design, implementation, and empirical evaluation of \textbf{AEGIS (Autonomous Entity Governance and Inspection Shield)}, an in-line security gateway for autonomous AI agents. By formalizing and proving \textbf{Theorem 1: Provenance-Dominated Approval}, AEGIS mathematically establishes that data provenance strictly dominates human approval, neutralizing indirect prompt injection and human social engineering.
+
+The system demonstrated 100\% attack blocking across 10 security scenarios with zero false positives, introduced only 17.98~ms mean latency overhead, and handled 50-worker concurrent load with zero database lock contention under SQLite Write-Ahead Logging (WAL).
+
+\section{Key Technical Contributions}
+The primary contributions of this project include:
+\begin{enumerate}
+    \item Formulation of the dual-lattice space $\mathcal{L}_{IFC} = \mathcal{C} \times \mathcal{I}$ and mathematical proof of Theorem 1.
+    \item A sub-20~ms multi-stage inspection pipeline combining compiled regex heuristics with ONNX quantized transformer classifiers.
+    \item Mitigation of TOCTOU attacks via canonical SHA-256 cryptographic approval token binding.
+    \item Drop-in reverse proxy architecture with zero modifications required on client AI agents.
+    \item A real-time Security Operations Center (SOC) dashboard featuring threat radars and causal lineage DAGs.
+\end{enumerate}
+
+\section{Limitations of the Current Implementation}
+The current prototype maintains lineage state in memory (cleared on restart), applies document-level rather than sentence-level taint, and operates as a single FastAPI process.
+
+\section{Future Scope \& Enhancements}
+Future development paths include:
+\begin{itemize}
+    \item \textbf{Linux Kernel eBPF Probes:} Moving outbound socket enforcement into kernel space for sub-microsecond filtering.
+    \item \textbf{Distributed Multi-Agent Swarm Lineage:} Synchronizing lattice states across distributed agent swarms via gossip protocols.
+    \item \textbf{Hardware Enclave Attestation:} Deploying approval token verification inside Intel SGX or AMD SEV confidential computing enclaves.
+    \item \textbf{Fine-Grained Attention Taint Tracking:} Inspecting Transformer attention weight matrices to isolate taint at the individual phrase level.
+\end{itemize}

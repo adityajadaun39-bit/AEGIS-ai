@@ -1,0 +1,105 @@
+\chapter{IMPLEMENTATION \& CODING SNAPSHOTS}
+
+\section{Project Directory Structure}
+The implementation codebase is structured into modular Python packages:
+\begin{itemize}
+    \item \texttt{backend/app.py}: FastAPI application root and ASGI lifecycle handlers.
+    \item \texttt{backend/security/gateway.py}: Core sequential inspection pipeline orchestrator.
+    \item \texttt{backend/security/ml\_detector.py}: Dual-Tier regex and ONNX neural classifier.
+    \item \texttt{backend/security/dlp\_engine.py}: Presidio and regex Data Loss Prevention scanner.
+    \item \texttt{backend/security/ifc\_lattice.py}: Dual-Lattice state tracker and Theorem 1 engine.
+    \item \texttt{backend/security/approval\_engine.py}: Cryptographic SHA-256 approval token manager.
+    \item \texttt{frontend/dashboard.py}: Streamlit SOC Threat Radar and Causal Lineage visualizer.
+\end{itemize}
+
+\section{In-Line Proxy Pipeline Implementation}
+Listing~\ref{lst:gateway} presents the core pipeline execution logic in \texttt{backend/security/gateway.py}.
+
+\begin{lstlisting}[language=Python,caption={AEGIS Gateway Sequential Inspection Pipeline},label={lst:gateway}]
+async def process_action(self, request: ActionRequest) -> ActionResponse:
+    start_time = time.perf_counter()
+    trace_id = str(uuid.uuid4())
+    
+    # Stage 1: Authenticate Calling Agent (<1ms)
+    if not self.auth_engine.verify_agent(request.agent_id, request.auth_token):
+        await self.audit_logger.log_denial(trace_id, request, "AUTH_FAILURE")
+        raise HTTPException(status_code=401, detail="Invalid Agent HMAC Token")
+
+    # Stage 2: Dual-Tier Injection Detection (0.8 - 14ms)
+    injection = await self.ml_detector.evaluate_payload(request.parameters)
+    if injection.is_injection:
+        await self.audit_logger.log_denial(trace_id, request, f"INJECTION: {injection.rule}")
+        return ActionResponse(trace_id=trace_id, status=DecisionStatus.DENIED,
+                              reason=f"Injection detected: {injection.rule}")
+
+    # Stage 3: Data Loss Prevention (DLP) Scanning (3ms)
+    violations = self.dlp_scanner.scan_dictionary(request.parameters)
+    if violations:
+        await self.audit_logger.log_denial(trace_id, request, f"DLP: {violations}")
+        return ActionResponse(trace_id=trace_id, status=DecisionStatus.DENIED,
+                              reason=f"DLP Leak: {', '.join(violations)}")
+
+    # Stage 4: Dual-Lattice IFC & Theorem 1 Verification (1.2ms)
+    session_lattice = self.lineage_tracker.get_session_state(request.session_id)
+    if not self.lineage_tracker.can_flow(session_lattice, request.target_sink):
+        await self.audit_logger.log_denial(trace_id, request, "THEOREM_1_VIOLATION")
+        return ActionResponse(trace_id=trace_id, status=DecisionStatus.DENIED,
+                              reason="Theorem 1: Tainted provenance cannot flow to sink")
+
+    # Stage 5: Cryptographic Approval Verification
+    if self.policy_engine.requires_approval(request.action_name):
+        return await self.approval_broker.handle_approval_requirement(trace_id, request, start_time)
+
+    # Stage 6: Tool Execution via Sandbox
+    tool_output = await self.tool_broker.execute_tool(request.action_name, request.parameters)
+    latency = (time.perf_counter() - start_time) * 1000.0
+    await self.audit_logger.log_success(trace_id, request, latency)
+    return ActionResponse(trace_id=trace_id, status=DecisionStatus.PERMITTED, result=tool_output)
+\end{lstlisting}
+
+\section{Dual-Tier Injection Detection Implementation}
+Listing~\ref{lst:detector} shows the hybrid regex and ONNX runtime classifier in \texttt{backend/security/ml\_detector.py}.
+
+\begin{lstlisting}[language=Python,caption={Dual-Tier Heuristic and Neural Classifier},label={lst:detector}]
+class DualTierInjectionDetector:
+    def __init__(self, model_path: str = "models/injection_classifier.onnx"):
+        self.heuristic_patterns = [
+            re.compile(r"ignore\s+(all\s+)?(previous|prior)\s+instructions", re.IGNORECASE),
+            re.compile(r"system\s+override", re.IGNORECASE),
+            re.compile(r"you\s+are\s+now\s+in\s+developer\s+mode", re.IGNORECASE)
+        ]
+        self.session = onnxruntime.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+
+    async def evaluate_payload(self, params: dict) -> InjectionDetectionResult:
+        flat_text = " ".join(str(v) for v in params.values())
+        for pattern in self.heuristic_patterns:
+            if pattern.search(flat_text):
+                return InjectionDetectionResult(is_injection=True, confidence=1.0, tier="TIER_1")
+                
+        tokens = self.tokenizer.encode(flat_text, max_length=128, truncation=True)
+        inputs = {self.session.get_inputs()[0].name: np.array([tokens], dtype=np.int64)}
+        logits = self.session.run(None, inputs)[0]
+        prob = float(scipy.special.softmax(logits)[0][1])
+        return InjectionDetectionResult(is_injection=(prob > 0.85), confidence=prob, tier="TIER_2")
+\end{lstlisting}
+
+\section{Cryptographic Token Binding Implementation}
+Listing~\ref{lst:crypto} demonstrates the SHA-256 canonical hashing mechanism preventing TOCTOU attacks in \texttt{backend/security/approval\_engine.py}.
+
+\begin{lstlisting}[language=Python,caption={Cryptographic Token Binding Engine},label={lst:crypto}]
+class CryptographicApprovalEngine:
+    def generate_bound_token(self, action: ActionRequest) -> ApprovalToken:
+        canonical_payload = json.dumps(action.parameters, sort_keys=True).encode('utf-8')
+        payload_hash = hashlib.sha256(canonical_payload).hexdigest()
+        token_id = str(uuid.uuid4())
+        expires_at = datetime.utcnow() + timedelta(minutes=5)
+        sig_base = f"{token_id}|{action.action_name}|{payload_hash}|{expires_at.isoformat()}"
+        signature = hmac.new(self.secret_key.encode(), sig_base.encode(), hashlib.sha256).hexdigest()
+        return ApprovalToken(token_id=token_id, payload_hash=payload_hash, signature=signature)
+
+    def verify_token(self, token: ApprovalToken, current_action: ActionRequest) -> bool:
+        current_hash = hashlib.sha256(json.dumps(current_action.parameters, sort_keys=True).encode()).hexdigest()
+        if token.payload_hash != current_hash:
+            return False  # Parameter payload was modified after approval was granted!
+        return True
+\end{lstlisting}

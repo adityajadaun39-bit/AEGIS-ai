@@ -1,0 +1,121 @@
+\documentclass[12pt,a4paper,oneside]{report}
+
+% =========================================================================
+% KCC Institute of Technology and Management (CC 492), Greater Noida
+% Minor Project Report Formatting:
+% - Font: Times New Roman, 12pt
+% - Line Spacing: 1.5 line spacing (\onehalfspacing)
+% - Margins: Left 1.25" (for binding), Right 1.0", Top 1.0", Bottom 1.0"
+% - Table Captions: Above the table
+% - Figure Captions: Below the figure
+% - Numbering: Arabic numerals with decimal notation (e.g. Chapter 3 -> 3.1)
+% =========================================================================
+
+\usepackage[left=1.25in,right=1.0in,top=1.0in,bottom=1.0in]{geometry}
+\usepackage{mathptmx} % Times New Roman font for text and math
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{titlesec}
+\usepackage{caption}
+
+% Caption setup per KCC circular
+\captionsetup[table]{position=top,skip=6pt}
+\captionsetup[figure]{position=bottom,skip=6pt}
+
+% Section Numbering Depth
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+% Code Listings Configuration
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codebg}{rgb}{0.96,0.97,0.98}
+\definecolor{codeblue}{rgb}{0.1,0.2,0.6}
+\definecolor{codegreen}{rgb}{0.1,0.5,0.2}
+
+\lstdefinestyle{pythonstyle}{
+    backgroundcolor=\color{codebg},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codeblue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{purple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4,
+    frame=single,
+    rulecolor=\color{black!20}
+}
+\lstset{style=pythonstyle}
+
+% Hyperref configuration
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=blue,
+    urlcolor=blue,
+    pdftitle={AEGIS: AI Agent Information-Flow Security Gateway with Provenance-Dominated Approval},
+    pdfauthor={Farhan Mallik et al., KCC ITM (CC 492)}
+}
+
+% Theorems
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}[chapter]
+
+\begin{document}
+
+% -------------------------------------------------------------------------
+% Frontmatter (Roman numerals)
+% -------------------------------------------------------------------------
+\pagenumbering{roman}
+
+\input{frontmatter/cover_title.tex}
+\input{frontmatter/certificate.tex}
+\input{frontmatter/declaration.tex}
+\input{frontmatter/acknowledgment.tex}
+\input{frontmatter/abstract.tex}
+
+% Table of Contents, Lists of Tables & Figures
+\tableofcontents
+\clearpage
+\listoftables
+\clearpage
+\listoffigures
+\clearpage
+
+% -------------------------------------------------------------------------
+% Main Chapters (Arabic numerals)
+% -------------------------------------------------------------------------
+\pagenumbering{arabic}
+
+\input{chapters/chapter1.tex}
+\input{chapters/chapter2.tex}
+\input{chapters/chapter3.tex}
+\input{chapters/chapter4.tex}
+\input{chapters/chapter5.tex}
+\input{chapters/chapter6.tex}
+
+% -------------------------------------------------------------------------
+% References / Bibliography
+% -------------------------------------------------------------------------
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
