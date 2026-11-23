@@ -4,7 +4,7 @@ import hmac
 import os
 from typing import Literal
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
@@ -30,6 +30,8 @@ from backend.security.gateway import execute_action
 from backend.schemas.approval import ApprovalStatus
 from backend.security import approval_store
 from backend.security.agent_auth import authenticate_agent
+from backend.security.pdf_analyzer import process_pdf_document_workflow
+from backend.tools.simulated_tools import DOCUMENTS
 
 
 app = FastAPI(title=config.APP_NAME, version=config.APP_VERSION)
@@ -245,6 +247,63 @@ def submit_action(
     require_agent_identity(request, agent_token)
 
     return execute_action(request, approval_id=approval_id)
+
+
+@app.post("/documents/upload")
+async def upload_document(
+    file: UploadFile = File(...),
+    agent_id: str = Header(default="research_agent", alias="X-AEGIS-Agent-Id"),
+):
+    """Upload and inspect a PDF document through the AEGIS security pipeline."""
+    if not (file.filename and file.filename.lower().endswith(".pdf")):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF documents are supported for security extraction",
+        )
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded file is empty",
+        )
+
+    return process_pdf_document_workflow(
+        file_bytes=content,
+        filename=file.filename,
+        agent_id=agent_id,
+    )
+
+
+@app.get("/documents")
+def list_documents():
+    """List all registered documents in the AEGIS secure document store."""
+    return {
+        "count": len(DOCUMENTS),
+        "documents": [
+            {
+                "resource": name,
+                "trust_level": doc["provenance"].trust_level.value,
+                "sensitivity": doc["provenance"].sensitivity.value,
+                "contains_untrusted_instructions": doc["provenance"].contains_untrusted_instructions,
+                "content_preview": doc["content"][:200] + ("..." if len(doc["content"]) > 200 else ""),
+            }
+            for name, doc in DOCUMENTS.items()
+        ],
+    }
+
+
+@app.get("/documents/{resource}")
+def get_document(resource: str):
+    """Retrieve full content and provenance metadata for a document."""
+    doc = DOCUMENTS.get(resource)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {
+        "resource": resource,
+        "content": doc["content"],
+        "provenance": doc["provenance"].model_dump(mode="json"),
+    }
 
 
 @app.get("/audit")

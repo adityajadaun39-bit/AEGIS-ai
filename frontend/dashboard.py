@@ -280,7 +280,7 @@ with kpi_col4:
 st.write("")
 
 # -----------------------------------------------------------------------------
-# Main Navigation Tabs (6 Tactical Views)
+# Main Navigation Tabs (7 Tactical Views)
 # -----------------------------------------------------------------------------
 tabs = st.tabs(
     [
@@ -288,11 +288,12 @@ tabs = st.tabs(
         "🧬 Causal Lineage DAG",
         "✍️ Cryptographic Approval Desk",
         "🎯 Interactive Attack Sandbox",
+        "📄 Document Upload & PDF Analyzer",
         "📚 Formal Lattice & Proofs",
         "🎙️ Defense Presentation Deck",
     ]
 )
-tab_telemetry, tab_dag, tab_hitl, tab_sandbox, tab_math, tab_deck = tabs
+tab_telemetry, tab_dag, tab_hitl, tab_sandbox, tab_doc, tab_math, tab_deck = tabs
 
 # =============================================================================
 # TAB 1: Threat Radar & Live Telemetry Stream
@@ -851,7 +852,270 @@ with tab_sandbox:
 
 
 # =============================================================================
-# TAB 5: Formal Security Lattice & Mathematical Proofs
+# TAB 5: Document Upload & PDF Security Analyzer Workflow
+# =============================================================================
+with tab_doc:
+    st.markdown("### 📄 Document Ingestion & PDF Security Analyzer")
+    st.caption("Inspect, sanitize, and analyze real PDF documents before allowing autonomous agents to ingest them.")
+
+    st.markdown(
+        """
+        <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 8px; padding: 0.8rem 1.2rem; margin-bottom: 1.2rem;">
+            <div style="font-size: 0.85rem; color: #94a3b8;">
+                <strong style="color: #00d4ff;">HOW AEGIS DEFENDS AGAINST DOCUMENT INJECTIONS:</strong>
+                When an AI agent reads an external document (resume, invoice, contract), adversaries can embed invisible prompts or instructions (OWASP LLM01). 
+                AEGIS extracts text, scans for covert zero-width characters and prompt injections, runs DLP secret redaction, and binds formal <strong>Dual-Lattice Provenance</strong>. 
+                If tainted, <strong>Theorem 1</strong> permanently locks out all downstream outbound exfiltration actions.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    doc_col_upload, doc_col_samples = st.columns([3, 2])
+
+    uploaded_pdf = None
+    sample_filename = None
+
+    with doc_col_upload:
+        st.markdown("#### 📤 Upload PDF Document")
+        user_uploaded = st.file_uploader(
+            "Drag & drop any PDF document for automated security extraction & agent analysis",
+            type=["pdf"],
+            help="Upload an invoice, contract, resume, or report to test the in-line inspection pipeline.",
+        )
+        if user_uploaded is not None:
+            uploaded_pdf = user_uploaded.read()
+            sample_filename = user_uploaded.name
+
+    with doc_col_samples:
+        st.markdown("#### ⚡ Quick-Load Test Documents")
+        st.caption("Select a pre-compiled sample document to test benign and adversarial scenarios:")
+
+        btn_c1, btn_c2, btn_c3 = st.columns(3)
+        sample_base = Path("data") / "sample_documents"
+
+        with btn_c1:
+            if st.button("📄 Benign Invoice", use_container_width=True, help="Clean financial document (Low risk)"):
+                p = sample_base / "benign_invoice.pdf"
+                if p.exists():
+                    st.session_state["active_sample"] = ("benign_invoice.pdf", p.read_bytes())
+        with btn_c2:
+            if st.button("🚨 Injected Resume", use_container_width=True, help="Contains indirect prompt injection"):
+                p = sample_base / "adversarial_resume.pdf"
+                if p.exists():
+                    st.session_state["active_sample"] = ("adversarial_resume.pdf", p.read_bytes())
+        with btn_c3:
+            if st.button("🔑 Secret Contract", use_container_width=True, help="Contains leaked AWS access keys & PII"):
+                p = sample_base / "sensitive_contract.pdf"
+                if p.exists():
+                    st.session_state["active_sample"] = ("sensitive_contract.pdf", p.read_bytes())
+
+        if "active_sample" in st.session_state and uploaded_pdf is None:
+            sample_filename, uploaded_pdf = st.session_state["active_sample"]
+            st.info(f"Loaded Sample Document: `{sample_filename}` ({len(uploaded_pdf)} bytes)")
+
+    # Execute Analysis if a document is present
+    if uploaded_pdf is not None:
+        from backend.security.pdf_analyzer import process_pdf_document_workflow
+
+        with st.spinner("Inspecting PDF structure, scanning for prompt injections, and checking DLP secrets..."):
+            result = process_pdf_document_workflow(uploaded_pdf, sample_filename or "document.pdf")
+
+        sec = result["security"]
+        ext = result["extraction"]
+        agent = result["agent_summary"]
+
+        st.divider()
+
+        # Visual Verdict Header
+        verdict = sec["verdict"]
+        risk = sec["risk_level"]
+
+        if risk == "CRITICAL":
+            badge_class = "badge-deny"
+            verdict_icon = "☠️"
+            verdict_title = "CRITICAL ADVERSARIAL THREAT DETECTED"
+        elif risk == "HIGH":
+            badge_class = "badge-deny"
+            verdict_icon = "🚨"
+            verdict_title = f"{verdict.replace('_', ' ')} DETECTED"
+        elif risk == "MEDIUM":
+            badge_class = "badge-hitl"
+            verdict_icon = "⚠️"
+            verdict_title = "SUSPICIOUS COVERT ELEMENTS DISCOVERED"
+        else:
+            badge_class = "badge-allow"
+            verdict_icon = "🟢"
+            verdict_title = "VERIFIED CLEAN & TRUSTED DOCUMENT"
+
+        st.markdown(
+            f"""
+            <div class="{badge_class}" style="padding: 1rem 1.5rem; width: 100%; border-radius: 10px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <span style="font-size: 1.4rem; font-weight: 800; letter-spacing: 0.05em;">{verdict_icon} {verdict_title}</span>
+                    <div style="font-size: 0.85rem; margin-top: 0.25rem;">Security Risk Level: <strong>{risk}</strong> &bull; File: <code>{ext['filename']}</code></div>
+                </div>
+                <div style="text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
+                    <div>INSPECTION OVERHEAD: &lt;18ms</div>
+                    <div>TRACE: <code>{result['trace_id'][:8]}</code></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # KPI Metrics Row
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.markdown(
+                f"""
+                <div class="double-bezel-card">
+                    <div class="double-bezel-inner">
+                        <div class="kpi-title">Document Scope</div>
+                        <div class="kpi-value">{ext['page_count']} Pages</div>
+                        <div class="kpi-subtext">{ext['file_size_bytes']} bytes &bull; {len(ext['full_text'].split())} words</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with m2:
+            inj_clr = "#fb7185" if sec["injection_score"] > 0.5 else "#34d399"
+            st.markdown(
+                f"""
+                <div class="double-bezel-card">
+                    <div class="double-bezel-inner">
+                        <div class="kpi-title">Injection Score</div>
+                        <div class="kpi-value" style="color: {inj_clr};">{sec['injection_score']:.2f}</div>
+                        <div class="kpi-subtext">Verdict: {sec['injection_verdict']}</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with m3:
+            dlp_clr = "#fb7185" if sec["has_sensitive_data"] else "#34d399"
+            findings_count = len(sec["dlp_findings"])
+            st.markdown(
+                f"""
+                <div class="double-bezel-card">
+                    <div class="double-bezel-inner">
+                        <div class="kpi-title">DLP Secret Findings</div>
+                        <div class="kpi-value" style="color: {dlp_clr};">{findings_count} Leaks</div>
+                        <div class="kpi-subtext">{'Secrets Discovered' if findings_count else 'No Plaintext Secrets'}</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with m4:
+            trust = sec["provenance"]["trust_level"]
+            sens = sec["provenance"]["sensitivity"]
+            trust_clr = "#fb7185" if trust == "UNTRUSTED" else "#34d399"
+            st.markdown(
+                f"""
+                <div class="double-bezel-card">
+                    <div class="double-bezel-inner">
+                        <div class="kpi-title">Dual-Lattice Label</div>
+                        <div class="kpi-value" style="color: {trust_clr}; font-size: 1.1rem;">{trust}</div>
+                        <div class="kpi-subtext">Sensitivity: <strong style="color: #38bdf8;">{sens}</strong></div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.write("")
+
+        # 2-Column Split: Detailed Governance & Agent Analysis vs Text Inspection
+        doc_analysis_col1, doc_analysis_col2 = st.columns([1, 1])
+
+        with doc_analysis_col1:
+            st.markdown("#### 🤖 AI Agent Synthesis & Governance Protocol")
+
+            st.markdown(
+                f"""
+                <div style="background: rgba(13, 18, 29, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 700; color: #38bdf8; margin-bottom: 0.5rem;">
+                        Classification: {agent['document_type']} &bull; Agent Status: {agent['agent_status']}
+                    </div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.75rem;">
+                        <strong>Executive Summary:</strong>
+                        <ul style="margin-top: 0.3rem; padding-left: 1.2rem;">
+                            {''.join(f"<li>{b}</li>" for b in agent['executive_summary_bullets'])}
+                        </ul>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #94a3b8;">
+                        <strong>Discovered Entities:</strong> Emails: <code>{', '.join(agent['extracted_entities']['email_addresses']) or 'None'}</code> &bull; 
+                        URLs: <code>{', '.join(agent['extracted_entities']['urls']) or 'None'}</code>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Governance Alert
+            gov_clr = "#fb7185" if "THEOREM 1" in sec["governance_decision"] else "#34d399"
+            st.markdown(
+                f"""
+                <div style="background: rgba(15, 23, 42, 0.8); border-left: 4px solid {gov_clr}; padding: 0.8rem 1.2rem; border-radius: 0 8px 8px 0; margin-bottom: 1.2rem;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: {gov_clr}; margin-bottom: 0.2rem;">AEGIS POLICY & INVARIANT EVALUATION:</div>
+                    <div style="font-size: 0.8rem; color: #cbd5e1;">{sec['governance_decision']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Interactive Attack Simulation Button
+            st.markdown("##### ⚡ Test Downstream Confused Deputy Attack")
+            st.caption("Simulate the agent attempting to dispatch an outbound email with data derived from this document:")
+
+            if st.button("🚀 Attempt Outbound Email Dispatch", key="btn_sim_exfil", use_container_width=True):
+                if sec["provenance"]["trust_level"] == "UNTRUSTED":
+                    st.error("🛡️ AEGIS ENFORCEMENT BLOCKED THE CALL!\n\n"
+                             "Status: 403 Forbidden (Theorem 1 Violation)\n\n"
+                             "Reason: Agent memory is TAINTED by untrusted document provenance. "
+                             "Even with human approval, outbound email dispatch is strictly prohibited!")
+                elif sec["provenance"]["sensitivity"] == "CONFIDENTIAL":
+                    st.error("🛡️ AEGIS ENFORCEMENT BLOCKED THE CALL!\n\n"
+                             "Status: 403 Forbidden (DLP Leakage)\n\n"
+                             "Reason: Target payload contains confidential credentials or customer PII.")
+                else:
+                    st.success("✅ AEGIS GATEWAY PERMITTED EXECUTION!\n\n"
+                               "Status: 200 OK (Clean Provenance)\n\n"
+                               "Action executed safely inside isolated sandbox.")
+
+        with doc_analysis_col2:
+            st.markdown("#### 🔍 Extracted Text & Sanitized Inspection")
+
+            if sec["matched_injection_patterns"]:
+                st.markdown("**🚨 Matched Injection Signatures:**")
+                for pat in sec["matched_injection_patterns"]:
+                    st.markdown(f"- `<code style='color: #fb7185;'>{pat}</code>`", unsafe_allow_html=True)
+
+            if sec["dlp_findings"]:
+                st.markdown("**🔑 Discovered Plaintext Secrets:**")
+                for finding in sec["dlp_findings"]:
+                    st.markdown(f"- **{finding['category']}**: `[REDACTED {finding['match']}]`")
+
+            # Document Text Viewer
+            with st.expander("📖 View Extracted Plaintext Content", expanded=True):
+                st.text_area(
+                    "Raw Content Stream",
+                    value=ext["full_text"],
+                    height=260,
+                    disabled=True,
+                )
+
+            with st.expander("🛠️ View Raw JSON Security Telemetry"):
+                st.json(result)
+    else:
+        st.info("👆 Upload a PDF file or click one of the sample buttons above to initiate the security analysis workflow.")
+
+
+# =============================================================================
+# TAB 6: Formal Security Lattice & Mathematical Proofs
 # =============================================================================
 with tab_math:
     st.markdown("### 📚 Mathematical Foundations: Dual-Lattice Information Flow Control")
