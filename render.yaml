@@ -1,0 +1,39 @@
+services:
+  # 1. FastAPI Security Gateway Backend
+  - type: web
+    name: aegis-security-gateway
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn backend.app:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: AEGIS_ADMIN_TOKEN
+        value: aegis-admin-secret-token-demo
+      - key: AEGIS_APPROVER_TOKEN
+        value: aegis-approver-secret-token-demo
+      - key: AEGIS_AGENT_TOKEN_RESEARCH_AGENT
+        value: aegis-research-agent-token
+
+  # 2. Streamlit SOC Console Dashboard
+  - type: web
+    name: aegis-soc-console
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "streamlit run frontend/dashboard.py --server.port $PORT --server.address 0.0.0.0"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: AEGIS_API_URL
+        fromService:
+          type: web
+          name: aegis-security-gateway
+          property: host
+      - key: AEGIS_ADMIN_TOKEN
+        value: aegis-admin-secret-token-demo
+      - key: AEGIS_APPROVER_TOKEN
+        value: aegis-approver-secret-token-demo
