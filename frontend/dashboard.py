@@ -280,7 +280,7 @@ with kpi_col4:
 st.write("")
 
 # -----------------------------------------------------------------------------
-# Main Navigation Tabs (7 Tactical Views)
+# Main Navigation Tabs (6 Tactical Views)
 # -----------------------------------------------------------------------------
 tabs = st.tabs(
     [
@@ -290,10 +290,9 @@ tabs = st.tabs(
         "🎯 Interactive Attack Sandbox",
         "📄 Document Upload & PDF Analyzer",
         "💡 Idea Flow & System Architecture",
-        "🎙️ Defense Presentation Deck",
     ]
 )
-tab_telemetry, tab_dag, tab_hitl, tab_sandbox, tab_doc, tab_arch, tab_deck = tabs
+tab_telemetry, tab_dag, tab_hitl, tab_sandbox, tab_doc, tab_arch = tabs
 
 # =============================================================================
 # TAB 1: Threat Radar & Live Telemetry Stream
@@ -1306,129 +1305,3 @@ with tab_arch:
         """
     )
 
-
-# =============================================================================
-# TAB 6: Capstone Defense Presentation Deck (14 Slides)
-# =============================================================================
-with tab_deck:
-    st.markdown("### 🎙️ 15-Minute Capstone Defense Slide Presenter")
-    st.caption("Present directly from the SOC console during the university examination or investor pitch.")
-
-    SLIDES = [
-        {
-            "num": 1,
-            "title": "AEGIS: Autonomous Entity Governance & Inspection Shield",
-            "speaker": "Farhan (Team Lead)",
-            "time": "00:00 - 02:00",
-            "content": """
-            - **Project Title:** AEGIS: AI Agent Information-Flow Security Gateway
-            - **Problem:** Autonomous tool-calling agents are vulnerable to Confused Deputy attacks.
-            - **Solution:** In-line security gateway where data provenance strictly dominates human approval.
-            - **5-Member WBS:** Farhan (Lead), Member 2 (ML), Member 3 (Security), Member 4 (DevOps), Member 5 (Frontend).
-            """,
-            "note": "Establish high confidence. Introduce the problem of agentic tool-use with credentials.",
-        },
-        {
-            "num": 2,
-            "title": "The Threat: Indirect Prompt Injection & Confused Deputy",
-            "speaker": "Farhan (Team Lead)",
-            "time": "01:00 - 02:00",
-            "content": """
-            - **The Von Neumann Vulnerability of LLMs:** Instructions and data are conflated in the same attention context.
-            - **OWASP LLM01:** Attackers embed hidden instructions in emails, invoices, or customer reviews.
-            - **The Result:** The agent adopts the attacker's objective and abuses its corporate privileges.
-            """,
-            "note": "Explain that attackers don't attack the API directly—they attack the data the agent reads.",
-        },
-        {
-            "num": 3,
-            "title": "The Fatal Flaw in Existing Defenses: Human Approval Fallacy",
-            "speaker": "Member 3 (Formal Security)",
-            "time": "02:00 - 03:45",
-            "content": """
-            - **Prompt Guardrails Fail:** Bypassed by adaptive adversarial jailbreaks.
-            - **Traditional Gateways Fail:** Stateless inspection lacks data provenance context.
-            - **Human Approvals Fail:** Humans are easily socially engineered by persuasive agent rationales.
-            """,
-            "note": "Highlight why adding 'Human-in-the-Loop' is insufficient without causal lineage tracking.",
-        },
-        {
-            "num": 4,
-            "title": "The Idea Flow: Provenance-Dominated Approval",
-            "speaker": "Member 3 (System Architecture)",
-            "time": "03:00 - 03:45",
-            "content": """
-            - **The Breakthrough Idea:** Data provenance strictly dominates human approval.
-            - **Taint Lineage Tracking:** External untrusted data permanently marks downstream execution context.
-            - **Enforcement Principle:** Even if an operator approves a socially engineered request, provenance stops execution.
-            """,
-            "note": "Explain the intuitive idea: provenance check guarantees that tricked humans cannot cause data leaks.",
-        },
-        {
-            "num": 5,
-            "title": "Two-Tier High-Performance Threat Detection",
-            "speaker": "Member 2 (ML Lead)",
-            "time": "03:45 - 05:30",
-            "content": """
-            - **Tier 1 (Sub-2ms Regex):** Scans for OWASP LLM injection primitives and delimiters.
-            - **Tier 2 (ONNX Runtime):** Quantized transformer sequence classifier running locally in < 25ms.
-            - **High-Entropy DLP Engine:** Intercepts AWS keys, OpenAI tokens, RSA headers in sub-millisecond time.
-            """,
-            "note": "Emphasize zero cloud dependencies and sub-perceptual latency overhead.",
-        },
-        {
-            "num": 6,
-            "title": "High-Concurrency Architecture & Zero-Lock Persistence",
-            "speaker": "Member 4 (DevOps Lead)",
-            "time": "05:30 - 07:15",
-            "content": """
-            - **SQLite Write-Ahead Logging (WAL):** Decouples concurrent reads from append-only incident writes.
-            - **50 Concurrent Workers Stress Test:** 100% success rate at 22.4 req/s with ZERO lock errors.
-            - **300 Repeated Benchmark Iterations:** 100% enforcement accuracy, median latency 23.2ms.
-            """,
-            "note": "Present empirical metrics to prove production engineering rigor.",
-        },
-        {
-            "num": 7,
-            "title": "Live Interactive Attack & Defense Demonstration",
-            "speaker": "Member 5 (Demo Pilot) & Team",
-            "time": "08:00 - 12:00",
-            "content": """
-            - **Scene 1:** Benign public document read (< 20ms ALLOW).
-            - **Scene 2:** Indirect prompt injection attack (QUARANTINED with ML score 0.92+).
-            - **Scene 3:** The Human Approval Trap (Provenance Dominance blocks tainted action).
-            - **Scene 4:** DLP secret interception & forensic Plotly DAG review.
-            """,
-            "note": "Switch to live browser tab at localhost:8501 and execute the 4-minute demo.",
-        },
-    ]
-
-    slide_idx = st.slider("Select Slide", 1, len(SLIDES), 1)
-    current_slide = SLIDES[slide_idx - 1]
-
-    st.markdown(
-        f"""
-        <div class="double-bezel-card" style="margin-top: 1rem;">
-            <div class="double-bezel-inner" style="min-height: 380px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
-                    <div>
-                        <span style="font-family: 'JetBrains Mono'; font-size: 0.8rem; color: #00d4ff; font-weight: 700;">SLIDE {current_slide['num']} OF {len(SLIDES)}</span>
-                        <h2 style="margin: 0.25rem 0 0 0; font-size: 1.5rem; color: #ffffff;">{current_slide['title']}</h2>
-                    </div>
-                    <div style="text-align: right;">
-                        <span class="badge-quarantined">{current_slide['speaker']}</span><br/>
-                        <span style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #94a3b8;">Time: {current_slide['time']}</span>
-                    </div>
-                </div>
-                <div style="font-size: 0.95rem; line-height: 1.6; color: #cbd5e1;">
-                    {current_slide['content']}
-                </div>
-                <div style="margin-top: 2rem; background: rgba(0, 212, 255, 0.05); border-left: 3px solid #00d4ff; padding: 0.75rem 1rem; border-radius: 6px;">
-                    <strong style="color: #00d4ff; font-size: 0.8rem; font-family: 'JetBrains Mono';">PRESENTER NOTE:</strong>
-                    <span style="color: #94a3b8; font-size: 0.85rem;"> {current_slide['note']}</span>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
